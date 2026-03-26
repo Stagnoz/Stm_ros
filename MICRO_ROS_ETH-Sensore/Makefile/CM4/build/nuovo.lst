@@ -1,0 +1,2986 @@
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 1
+
+
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"nuovo.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "../../CM4/Core/Src/nuovo.c"
+  18              		.section	.text.MX_GPIO_Init,"ax",%progbits
+  19              		.align	1
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	MX_GPIO_Init:
+  25              	.LFB139:
+   1:../../CM4/Core/Src/nuovo.c **** /**
+   2:../../CM4/Core/Src/nuovo.c ****   ******************************************************************************
+   3:../../CM4/Core/Src/nuovo.c ****   * @file           : main_debug.c
+   4:../../CM4/Core/Src/nuovo.c ****   * @brief          : JSN-SR04T ultrasonic sensor demo
+   5:../../CM4/Core/Src/nuovo.c ****   *
+   6:../../CM4/Core/Src/nuovo.c ****   * Sequence:
+   7:../../CM4/Core/Src/nuovo.c ****   *   PHASE 1 (5s): TRIG toggles 500ms on/500ms off  → probe PD1 with multimeter
+   8:../../CM4/Core/Src/nuovo.c ****   *   PHASE 2 (5s): raw ECHO read → GREEN=HIGH, RED=LOW
+   9:../../CM4/Core/Src/nuovo.c ****   *   PHASE 3 (5s): full trigger+echo attempt → GREEN=echo received, RED=timeout
+  10:../../CM4/Core/Src/nuovo.c ****   *   PHASE 4:      loop showing distance via blinks (if phase 3 worked)
+  11:../../CM4/Core/Src/nuovo.c ****   ******************************************************************************
+  12:../../CM4/Core/Src/nuovo.c ****   */
+  13:../../CM4/Core/Src/nuovo.c **** 
+  14:../../CM4/Core/Src/nuovo.c **** #include "main.h"
+  15:../../CM4/Core/Src/nuovo.c **** #include <stdio.h> // Indispensabile per la funzione printf
+  16:../../CM4/Core/Src/nuovo.c **** 
+  17:../../CM4/Core/Src/nuovo.c **** TIM_HandleTypeDef htim2;
+  18:../../CM4/Core/Src/nuovo.c **** /* Assicurati che la variabile UART globale generata da CubeMX sia visibile */
+  19:../../CM4/Core/Src/nuovo.c **** /* Sostituisci huart1 con l'handle della UART che hai scelto (es. huart3) */
+  20:../../CM4/Core/Src/nuovo.c **** UART_HandleTypeDef huart4;
+  21:../../CM4/Core/Src/nuovo.c **** 
+  22:../../CM4/Core/Src/nuovo.c **** #define TIMER_TARGET_HZ       1000000U
+  23:../../CM4/Core/Src/nuovo.c **** #define TRIG_RESET_TIME_US    2U
+  24:../../CM4/Core/Src/nuovo.c **** #define TRIG_PULSE_TIME_US    10U
+  25:../../CM4/Core/Src/nuovo.c **** #define ECHO_WAIT_TIMEOUT_US  30000U
+  26:../../CM4/Core/Src/nuovo.c **** #define ECHO_PULSE_TIMEOUT_US 26000U
+  27:../../CM4/Core/Src/nuovo.c **** 
+  28:../../CM4/Core/Src/nuovo.c **** #define BUSY(n)  do { for (volatile int _i = 0; _i < (n); _i++); } while(0)
+  29:../../CM4/Core/Src/nuovo.c **** 
+  30:../../CM4/Core/Src/nuovo.c **** #define LED_GREEN_ON()   (GPIOB->BSRR = (1U <<  0))
+  31:../../CM4/Core/Src/nuovo.c **** #define LED_GREEN_OFF()  (GPIOB->BSRR = (1U << 16))
+  32:../../CM4/Core/Src/nuovo.c **** #define LED_RED_ON()     (GPIOB->BSRR = (1U << 14))
+  33:../../CM4/Core/Src/nuovo.c **** #define LED_RED_OFF()    (GPIOB->BSRR = (1U << 30))
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 2
+
+
+  34:../../CM4/Core/Src/nuovo.c **** #define LED_ALL_OFF()    do { LED_GREEN_OFF(); LED_RED_OFF(); } while(0)
+  35:../../CM4/Core/Src/nuovo.c **** 
+  36:../../CM4/Core/Src/nuovo.c **** static void SystemClock_Config(void);
+  37:../../CM4/Core/Src/nuovo.c **** static void MX_GPIO_Init(void);
+  38:../../CM4/Core/Src/nuovo.c **** static void MX_TIM2_Init(void);
+  39:../../CM4/Core/Src/nuovo.c **** static void MX_UART4_Init(void);
+  40:../../CM4/Core/Src/nuovo.c **** 
+  41:../../CM4/Core/Src/nuovo.c **** 
+  42:../../CM4/Core/Src/nuovo.c **** int main(void)
+  43:../../CM4/Core/Src/nuovo.c **** {
+  44:../../CM4/Core/Src/nuovo.c ****     /* ------------------------------------------------------------------ */
+  45:../../CM4/Core/Src/nuovo.c ****     /* Pre-HAL GPIO: enable GPIOB for LEDs                                */
+  46:../../CM4/Core/Src/nuovo.c ****     /* ------------------------------------------------------------------ */
+  47:../../CM4/Core/Src/nuovo.c ****     RCC->AHB4ENR |= (1U << 1);
+  48:../../CM4/Core/Src/nuovo.c ****     BUSY(10000);
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+  50:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+  51:../../CM4/Core/Src/nuovo.c **** 
+  52:../../CM4/Core/Src/nuovo.c ****     /* Quick alive blink */
+  53:../../CM4/Core/Src/nuovo.c ****     for (int j = 0; j < 2; j++) {
+  54:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+  55:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+  56:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+  57:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+  58:../../CM4/Core/Src/nuovo.c ****     }
+  59:../../CM4/Core/Src/nuovo.c **** 
+  60:../../CM4/Core/Src/nuovo.c ****     HAL_Init();
+  61:../../CM4/Core/Src/nuovo.c ****     SystemClock_Config();
+  62:../../CM4/Core/Src/nuovo.c ****     SCB->VTOR = 0x08100000;
+  63:../../CM4/Core/Src/nuovo.c ****     MX_GPIO_Init();
+  64:../../CM4/Core/Src/nuovo.c ****     MX_TIM2_Init();
+  65:../../CM4/Core/Src/nuovo.c ****     MX_UART4_Init();
+  66:../../CM4/Core/Src/nuovo.c **** 
+  67:../../CM4/Core/Src/nuovo.c ****     /* Compute prescaler */
+  68:../../CM4/Core/Src/nuovo.c ****     uint32_t pclk1   = HAL_RCC_GetPCLK1Freq();
+  69:../../CM4/Core/Src/nuovo.c ****     uint32_t apb1pre = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk)
+  70:../../CM4/Core/Src/nuovo.c ****                         >> RCC_D2CFGR_D2PPRE1_Pos;
+  71:../../CM4/Core/Src/nuovo.c ****     uint32_t tim2clk = (apb1pre >= 0x04U) ? (pclk1 * 2U) : pclk1;
+  72:../../CM4/Core/Src/nuovo.c ****     uint32_t psc     = (tim2clk / TIMER_TARGET_HZ);
+  73:../../CM4/Core/Src/nuovo.c ****     if (psc > 0U) { psc -= 1U; }
+  74:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_PRESCALER(&htim2, psc);
+  75:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_COUNTER(&htim2, 0);
+  76:../../CM4/Core/Src/nuovo.c ****     HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_UPDATE);
+  77:../../CM4/Core/Src/nuovo.c ****     HAL_TIM_Base_Start(&htim2);
+  78:../../CM4/Core/Src/nuovo.c **** 
+  79:../../CM4/Core/Src/nuovo.c ****     /* Clocks OK — 2 green blinks */
+  80:../../CM4/Core/Src/nuovo.c ****     for (int j = 0; j < 2; j++) {
+  81:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+  82:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_OFF(); HAL_Delay(200U);
+  83:../../CM4/Core/Src/nuovo.c ****     }
+  84:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(500U);
+  85:../../CM4/Core/Src/nuovo.c **** 
+  86:../../CM4/Core/Src/nuovo.c **** 
+  87:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+  88:../../CM4/Core/Src/nuovo.c ****     /* PHASE 1: TRIG toggle — probe PD1 with multimeter                   */
+  89:../../CM4/Core/Src/nuovo.c ****     /* Expected: ~3.3V / 0V alternating every 500ms                       */
+  90:../../CM4/Core/Src/nuovo.c ****     /* Failure:  stuck at 0V → GPIOD clock or MX_GPIO_Init broken         */
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 3
+
+
+  91:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+  92:../../CM4/Core/Src/nuovo.c **** 
+  93:../../CM4/Core/Src/nuovo.c ****     /* 1× slow red = entering phase 1 */
+  94:../../CM4/Core/Src/nuovo.c ****     LED_RED_ON(); HAL_Delay(1000U); LED_RED_OFF(); HAL_Delay(500U);
+  95:../../CM4/Core/Src/nuovo.c **** 
+  96:../../CM4/Core/Src/nuovo.c ****     uint32_t phase1_start = HAL_GetTick();
+  97:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase1_start < 5000U) {
+  98:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+  99:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON();
+ 100:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(500U);
+ 101:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 102:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_OFF();
+ 103:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(500U);
+ 104:../../CM4/Core/Src/nuovo.c ****     }
+ 105:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(1000U);
+ 106:../../CM4/Core/Src/nuovo.c **** 
+ 107:../../CM4/Core/Src/nuovo.c **** 
+ 108:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 109:../../CM4/Core/Src/nuovo.c ****     /* PHASE 2: Raw ECHO read — no trigger sent                           */
+ 110:../../CM4/Core/Src/nuovo.c ****     /* GREEN = PD0 reads HIGH                                             */
+ 111:../../CM4/Core/Src/nuovo.c ****     /* RED   = PD0 reads LOW  (expected with PULLDOWN and no signal)      */
+ 112:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 113:../../CM4/Core/Src/nuovo.c **** 
+ 114:../../CM4/Core/Src/nuovo.c ****     /* 2× slow red = entering phase 2 */
+ 115:../../CM4/Core/Src/nuovo.c ****     for (int j = 0; j < 2; j++) {
+ 116:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 117:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 118:../../CM4/Core/Src/nuovo.c ****     }
+ 119:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(500U);
+ 120:../../CM4/Core/Src/nuovo.c **** 
+ 121:../../CM4/Core/Src/nuovo.c ****     uint32_t phase2_start = HAL_GetTick();
+ 122:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase2_start < 5000U) {
+ 123:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 124:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); LED_RED_OFF();
+ 125:../../CM4/Core/Src/nuovo.c ****         } else {
+ 126:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_OFF(); LED_RED_ON();
+ 127:../../CM4/Core/Src/nuovo.c ****         }
+ 128:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(50U);
+ 129:../../CM4/Core/Src/nuovo.c ****     }
+ 130:../../CM4/Core/Src/nuovo.c ****     LED_ALL_OFF();
+ 131:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(5000U);
+ 132:../../CM4/Core/Src/nuovo.c **** 
+ 133:../../CM4/Core/Src/nuovo.c **** 
+ 134:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 135:../../CM4/Core/Src/nuovo.c ****     /* PHASE 3: Full trigger → echo attempt, 10 tries                    */
+ 136:../../CM4/Core/Src/nuovo.c ****     /* GREEN blink = echo received                                        */
+ 137:../../CM4/Core/Src/nuovo.c ****     /* RED blink   = timeout                                              */
+ 138:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 139:../../CM4/Core/Src/nuovo.c **** 
+ 140:../../CM4/Core/Src/nuovo.c ****     /* 3× slow red = entering phase 3 */
+ 141:../../CM4/Core/Src/nuovo.c ****     for (int j = 0; j < 3; j++) {
+ 142:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 143:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 144:../../CM4/Core/Src/nuovo.c ****     }
+ 145:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(500U);
+ 146:../../CM4/Core/Src/nuovo.c **** 
+ 147:../../CM4/Core/Src/nuovo.c ****     uint8_t any_echo = 0U;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 4
+
+
+ 148:../../CM4/Core/Src/nuovo.c ****     uint32_t echo_time = 0U;
+ 149:../../CM4/Core/Src/nuovo.c **** 
+ 150:../../CM4/Core/Src/nuovo.c ****     for (int attempt = 0; attempt < 10; attempt++) {
+ 151:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 152:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 153:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 154:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_RESET_TIME_US);
+ 155:../../CM4/Core/Src/nuovo.c **** 
+ 156:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 157:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 158:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_PULSE_TIME_US);
+ 159:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 160:../../CM4/Core/Src/nuovo.c **** 
+ 161:../../CM4/Core/Src/nuovo.c ****         /* Wait for echo HIGH */
+ 162:../../CM4/Core/Src/nuovo.c ****         uint8_t got_echo = 0U;
+ 163:../../CM4/Core/Src/nuovo.c ****         uint32_t wait_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 164:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 165:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - wait_start)
+ 166:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 167:../../CM4/Core/Src/nuovo.c ****         }
+ 168:../../CM4/Core/Src/nuovo.c **** 
+ 169:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 170:../../CM4/Core/Src/nuovo.c ****             uint32_t echo_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 171:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 172:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start)
+ 173:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 174:../../CM4/Core/Src/nuovo.c ****             }
+ 175:../../CM4/Core/Src/nuovo.c ****             echo_time = (uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start);
+ 176:../../CM4/Core/Src/nuovo.c ****             got_echo = 1U;
+ 177:../../CM4/Core/Src/nuovo.c ****             any_echo = 1U;
+ 178:../../CM4/Core/Src/nuovo.c ****         }
+ 179:../../CM4/Core/Src/nuovo.c **** 
+ 180:../../CM4/Core/Src/nuovo.c ****         if (got_echo) {
+ 181:../../CM4/Core/Src/nuovo.c ****             /* GREEN blink = echo received this attempt */
+ 182:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(300U); LED_GREEN_OFF();
+ 183:../../CM4/Core/Src/nuovo.c ****         } else {
+ 184:../../CM4/Core/Src/nuovo.c ****             /* RED blink = no echo this attempt */
+ 185:../../CM4/Core/Src/nuovo.c ****             LED_RED_ON(); HAL_Delay(300U); LED_RED_OFF();
+ 186:../../CM4/Core/Src/nuovo.c ****         }
+ 187:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(200U);
+ 188:../../CM4/Core/Src/nuovo.c ****     }
+ 189:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(1000U);
+ 190:../../CM4/Core/Src/nuovo.c **** 
+ 191:../../CM4/Core/Src/nuovo.c **** 
+ 192:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 193:../../CM4/Core/Src/nuovo.c ****     /* PHASE 4: Result                                                     */
+ 194:../../CM4/Core/Src/nuovo.c ****     /* If any echo was received: distance blinks on green                 */
+ 195:../../CM4/Core/Src/nuovo.c ****     /* If no echo at all:        solid red forever → debug wiring         */
+ 196:../../CM4/Core/Src/nuovo.c ****     /* ================================================================== */
+ 197:../../CM4/Core/Src/nuovo.c ****     if (!any_echo) {
+ 198:../../CM4/Core/Src/nuovo.c ****         /* Solid red = complete failure, check wiring */
+ 199:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON();
+ 200:../../CM4/Core/Src/nuovo.c ****         while (1);
+ 201:../../CM4/Core/Src/nuovo.c ****     }
+ 202:../../CM4/Core/Src/nuovo.c **** 
+ 203:../../CM4/Core/Src/nuovo.c ****     /* Distance in cm via green blinks (up to 9, then pause) */
+ 204:../../CM4/Core/Src/nuovo.c ****     uint32_t dist_cm = echo_time / 58U;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 5
+
+
+ 205:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ 206:../../CM4/Core/Src/nuovo.c ****         uint32_t blinks = dist_cm;
+ 207:../../CM4/Core/Src/nuovo.c ****         if (blinks == 0U)  { blinks = 1U; }
+ 208:../../CM4/Core/Src/nuovo.c ****         if (blinks > 20U)  { blinks = 20U; }
+ 209:../../CM4/Core/Src/nuovo.c **** 
+ 210:../../CM4/Core/Src/nuovo.c ****         for (uint32_t b = 0; b < blinks; b++) {
+ 211:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 212:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_OFF(); HAL_Delay(150U);
+ 213:../../CM4/Core/Src/nuovo.c ****             printf("LED ACCESO %lu\n", dist_cm );
+ 214:../../CM4/Core/Src/nuovo.c ****         }
+ 215:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(1500U);   /* pause between readings */
+ 216:../../CM4/Core/Src/nuovo.c **** 
+ 217:../../CM4/Core/Src/nuovo.c ****         /* Retrigger for fresh distance */
+ 218:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 219:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 220:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_RESET_TIME_US);
+ 221:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 222:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 223:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_PULSE_TIME_US);
+ 224:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 225:../../CM4/Core/Src/nuovo.c **** 
+ 226:../../CM4/Core/Src/nuovo.c ****         uint32_t ws = __HAL_TIM_GET_COUNTER(&htim2);
+ 227:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 228:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - ws)
+ 229:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 230:../../CM4/Core/Src/nuovo.c ****         }
+ 231:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 232:../../CM4/Core/Src/nuovo.c ****             uint32_t es = __HAL_TIM_GET_COUNTER(&htim2);
+ 233:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 234:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es)
+ 235:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 236:../../CM4/Core/Src/nuovo.c ****             }
+ 237:../../CM4/Core/Src/nuovo.c ****             echo_time = (uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es);
+ 238:../../CM4/Core/Src/nuovo.c ****             dist_cm   = echo_time / 58U;
+ 239:../../CM4/Core/Src/nuovo.c ****         }
+ 240:../../CM4/Core/Src/nuovo.c ****     }
+ 241:../../CM4/Core/Src/nuovo.c **** }
+ 242:../../CM4/Core/Src/nuovo.c **** static void MX_UART4_Init(void)
+ 243:../../CM4/Core/Src/nuovo.c **** {
+ 244:../../CM4/Core/Src/nuovo.c **** 
+ 245:../../CM4/Core/Src/nuovo.c ****   /* USER CODE BEGIN UART4_Init 0 */
+ 246:../../CM4/Core/Src/nuovo.c **** 
+ 247:../../CM4/Core/Src/nuovo.c ****   /* USER CODE END UART4_Init 0 */
+ 248:../../CM4/Core/Src/nuovo.c **** 
+ 249:../../CM4/Core/Src/nuovo.c ****   /* USER CODE BEGIN UART4_Init 1 */
+ 250:../../CM4/Core/Src/nuovo.c **** 
+ 251:../../CM4/Core/Src/nuovo.c ****   /* USER CODE END UART4_Init 1 */
+ 252:../../CM4/Core/Src/nuovo.c ****   huart4.Instance = UART4;
+ 253:../../CM4/Core/Src/nuovo.c ****   huart4.Init.BaudRate = 115200;
+ 254:../../CM4/Core/Src/nuovo.c ****   huart4.Init.WordLength = UART_WORDLENGTH_8B;
+ 255:../../CM4/Core/Src/nuovo.c ****   huart4.Init.StopBits = UART_STOPBITS_1;
+ 256:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Parity = UART_PARITY_NONE;
+ 257:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Mode = UART_MODE_TX_RX;
+ 258:../../CM4/Core/Src/nuovo.c ****   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+ 259:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+ 260:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+ 261:../../CM4/Core/Src/nuovo.c ****   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 6
+
+
+ 262:../../CM4/Core/Src/nuovo.c ****   huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+ 263:../../CM4/Core/Src/nuovo.c ****   if (HAL_UART_Init(&huart4) != HAL_OK)
+ 264:../../CM4/Core/Src/nuovo.c ****   {
+ 265:../../CM4/Core/Src/nuovo.c ****     Error_Handler();
+ 266:../../CM4/Core/Src/nuovo.c ****   }
+ 267:../../CM4/Core/Src/nuovo.c ****   if (HAL_UARTEx_SetTxFifoThreshold(&huart4, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+ 268:../../CM4/Core/Src/nuovo.c ****   {
+ 269:../../CM4/Core/Src/nuovo.c ****     Error_Handler();
+ 270:../../CM4/Core/Src/nuovo.c ****   }
+ 271:../../CM4/Core/Src/nuovo.c ****   if (HAL_UARTEx_SetRxFifoThreshold(&huart4, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+ 272:../../CM4/Core/Src/nuovo.c ****   {
+ 273:../../CM4/Core/Src/nuovo.c ****     Error_Handler();
+ 274:../../CM4/Core/Src/nuovo.c ****   }
+ 275:../../CM4/Core/Src/nuovo.c ****   if (HAL_UARTEx_DisableFifoMode(&huart4) != HAL_OK)
+ 276:../../CM4/Core/Src/nuovo.c ****   {
+ 277:../../CM4/Core/Src/nuovo.c ****     Error_Handler();
+ 278:../../CM4/Core/Src/nuovo.c ****   }
+ 279:../../CM4/Core/Src/nuovo.c ****   /* USER CODE BEGIN UART4_Init 2 */
+ 280:../../CM4/Core/Src/nuovo.c **** 
+ 281:../../CM4/Core/Src/nuovo.c ****   /* USER CODE END UART4_Init 2 */
+ 282:../../CM4/Core/Src/nuovo.c **** 
+ 283:../../CM4/Core/Src/nuovo.c **** }
+ 284:../../CM4/Core/Src/nuovo.c **** 
+ 285:../../CM4/Core/Src/nuovo.c **** 
+ 286:../../CM4/Core/Src/nuovo.c **** /* ========================================================================
+ 287:../../CM4/Core/Src/nuovo.c ****  * Peripherals
+ 288:../../CM4/Core/Src/nuovo.c ****  * ======================================================================== */
+ 289:../../CM4/Core/Src/nuovo.c **** static void SystemClock_Config(void)
+ 290:../../CM4/Core/Src/nuovo.c **** {
+ 291:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+ 292:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ 293:../../CM4/Core/Src/nuovo.c **** 
+ 294:../../CM4/Core/Src/nuovo.c ****     HAL_PWREx_ConfigSupply(PWR_DIRECT_SMPS_SUPPLY);
+ 295:../../CM4/Core/Src/nuovo.c ****     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+ 296:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 297:../../CM4/Core/Src/nuovo.c **** 
+ 298:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+ 299:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSIState            = RCC_HSI_DIV1;
+ 300:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+ 301:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+ 302:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+ 303:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLM            = 4;
+ 304:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLN            = 28;
+ 305:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLP            = 2;
+ 306:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLQ            = 5;
+ 307:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLR            = 2;
+ 308:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLRGE          = RCC_PLL1VCIRANGE_3;
+ 309:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLVCOSEL       = RCC_PLL1VCOWIDE;
+ 310:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLFRACN        = 1024;
+ 311:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) { Error_Handler(); }
+ 312:../../CM4/Core/Src/nuovo.c **** 
+ 313:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK  | RCC_CLOCKTYPE_SYSCLK |
+ 314:../../CM4/Core/Src/nuovo.c ****                                        RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  |
+ 315:../../CM4/Core/Src/nuovo.c ****                                        RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
+ 316:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+ 317:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
+ 318:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 7
+
+
+ 319:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+ 320:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+ 321:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+ 322:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
+ 323:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) { Error_Handler(); }
+ 324:../../CM4/Core/Src/nuovo.c **** }
+ 325:../../CM4/Core/Src/nuovo.c **** 
+ 326:../../CM4/Core/Src/nuovo.c **** static void MX_TIM2_Init(void)
+ 327:../../CM4/Core/Src/nuovo.c **** {
+ 328:../../CM4/Core/Src/nuovo.c ****     __HAL_RCC_TIM2_CLK_ENABLE();
+ 329:../../CM4/Core/Src/nuovo.c **** 
+ 330:../../CM4/Core/Src/nuovo.c ****     TIM_ClockConfigTypeDef  sClockSourceConfig = {0};
+ 331:../../CM4/Core/Src/nuovo.c ****     TIM_MasterConfigTypeDef sMasterConfig      = {0};
+ 332:../../CM4/Core/Src/nuovo.c **** 
+ 333:../../CM4/Core/Src/nuovo.c ****     htim2.Instance               = TIM2;
+ 334:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Prescaler         = 0;
+ 335:../../CM4/Core/Src/nuovo.c ****     htim2.Init.CounterMode       = TIM_COUNTERMODE_UP;
+ 336:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Period            = 0xFFFFFFFFU;
+ 337:../../CM4/Core/Src/nuovo.c ****     htim2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+ 338:../../CM4/Core/Src/nuovo.c ****     htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+ 339:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_Base_Init(&htim2) != HAL_OK) { Error_Handler(); }
+ 340:../../CM4/Core/Src/nuovo.c **** 
+ 341:../../CM4/Core/Src/nuovo.c ****     sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+ 342:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) { Error_Handler(); }
+ 343:../../CM4/Core/Src/nuovo.c **** 
+ 344:../../CM4/Core/Src/nuovo.c ****     sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+ 345:../../CM4/Core/Src/nuovo.c ****     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+ 346:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) { Error_Handler();
+ 347:../../CM4/Core/Src/nuovo.c **** }
+ 348:../../CM4/Core/Src/nuovo.c **** 
+ 349:../../CM4/Core/Src/nuovo.c **** static void MX_GPIO_Init(void)
+ 350:../../CM4/Core/Src/nuovo.c **** {
+  26              		.loc 1 350 1 view -0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 32
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30 0000 2DE9F043 		push	{r4, r5, r6, r7, r8, r9, lr}
+  31              	.LCFI0:
+  32              		.cfi_def_cfa_offset 28
+  33              		.cfi_offset 4, -28
+  34              		.cfi_offset 5, -24
+  35              		.cfi_offset 6, -20
+  36              		.cfi_offset 7, -16
+  37              		.cfi_offset 8, -12
+  38              		.cfi_offset 9, -8
+  39              		.cfi_offset 14, -4
+  40 0004 89B0     		sub	sp, sp, #36
+  41              	.LCFI1:
+  42              		.cfi_def_cfa_offset 64
+ 351:../../CM4/Core/Src/nuovo.c ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  43              		.loc 1 351 5 view .LVU1
+  44              		.loc 1 351 22 is_stmt 0 view .LVU2
+  45 0006 03AD     		add	r5, sp, #12
+  46 0008 0024     		movs	r4, #0
+  47 000a 0394     		str	r4, [sp, #12]
+  48 000c 0494     		str	r4, [sp, #16]
+  49 000e 0594     		str	r4, [sp, #20]
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 8
+
+
+  50 0010 0694     		str	r4, [sp, #24]
+  51 0012 0794     		str	r4, [sp, #28]
+ 352:../../CM4/Core/Src/nuovo.c **** 
+ 353:../../CM4/Core/Src/nuovo.c ****     __HAL_RCC_GPIOD_CLK_ENABLE();
+  52              		.loc 1 353 5 is_stmt 1 view .LVU3
+  53              	.LBB6:
+  54              		.loc 1 353 5 view .LVU4
+  55              		.loc 1 353 5 view .LVU5
+  56 0014 274B     		ldr	r3, .L3
+  57 0016 D3F8E020 		ldr	r2, [r3, #224]
+  58 001a 42F00802 		orr	r2, r2, #8
+  59 001e C3F8E020 		str	r2, [r3, #224]
+  60              		.loc 1 353 5 view .LVU6
+  61 0022 D3F8E020 		ldr	r2, [r3, #224]
+  62 0026 02F00802 		and	r2, r2, #8
+  63 002a 0192     		str	r2, [sp, #4]
+  64              		.loc 1 353 5 view .LVU7
+  65 002c 019A     		ldr	r2, [sp, #4]
+  66              	.LBE6:
+  67              		.loc 1 353 5 view .LVU8
+ 354:../../CM4/Core/Src/nuovo.c ****     __HAL_RCC_GPIOB_CLK_ENABLE();
+  68              		.loc 1 354 5 view .LVU9
+  69              	.LBB7:
+  70              		.loc 1 354 5 view .LVU10
+  71              		.loc 1 354 5 view .LVU11
+  72 002e D3F8E020 		ldr	r2, [r3, #224]
+  73 0032 42F00202 		orr	r2, r2, #2
+  74 0036 C3F8E020 		str	r2, [r3, #224]
+  75              		.loc 1 354 5 view .LVU12
+  76 003a D3F8E030 		ldr	r3, [r3, #224]
+  77 003e 03F00203 		and	r3, r3, #2
+  78 0042 0293     		str	r3, [sp, #8]
+  79              		.loc 1 354 5 view .LVU13
+  80 0044 029B     		ldr	r3, [sp, #8]
+  81              	.LBE7:
+  82              		.loc 1 354 5 view .LVU14
+ 355:../../CM4/Core/Src/nuovo.c **** 
+ 356:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+  83              		.loc 1 356 5 view .LVU15
+  84 0046 DFF87080 		ldr	r8, .L3+4
+  85 004a 2246     		mov	r2, r4
+  86 004c 0221     		movs	r1, #2
+  87 004e 4046     		mov	r0, r8
+  88 0050 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  89              	.LVL0:
+ 357:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_14, GPIO_PIN_RESET);
+  90              		.loc 1 357 5 view .LVU16
+  91 0054 194F     		ldr	r7, .L3+8
+  92 0056 2246     		mov	r2, r4
+  93 0058 44F20101 		movw	r1, #16385
+  94 005c 3846     		mov	r0, r7
+  95 005e FFF7FEFF 		bl	HAL_GPIO_WritePin
+  96              	.LVL1:
+ 358:../../CM4/Core/Src/nuovo.c **** 
+ 359:../../CM4/Core/Src/nuovo.c ****     /* PD0 — ECHO input */
+ 360:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pin  = GPIO_PIN_0;
+  97              		.loc 1 360 5 view .LVU17
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 9
+
+
+  98              		.loc 1 360 26 is_stmt 0 view .LVU18
+  99 0062 0126     		movs	r6, #1
+ 100 0064 0396     		str	r6, [sp, #12]
+ 361:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+ 101              		.loc 1 361 5 is_stmt 1 view .LVU19
+ 102              		.loc 1 361 26 is_stmt 0 view .LVU20
+ 103 0066 0494     		str	r4, [sp, #16]
+ 362:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+ 104              		.loc 1 362 5 is_stmt 1 view .LVU21
+ 105              		.loc 1 362 26 is_stmt 0 view .LVU22
+ 106 0068 4FF00209 		mov	r9, #2
+ 107 006c CDF81490 		str	r9, [sp, #20]
+ 363:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+ 108              		.loc 1 363 5 is_stmt 1 view .LVU23
+ 109 0070 2946     		mov	r1, r5
+ 110 0072 4046     		mov	r0, r8
+ 111 0074 FFF7FEFF 		bl	HAL_GPIO_Init
+ 112              	.LVL2:
+ 364:../../CM4/Core/Src/nuovo.c **** 
+ 365:../../CM4/Core/Src/nuovo.c ****     /* PD1 — TRIG output */
+ 366:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pin   = GPIO_PIN_1;
+ 113              		.loc 1 366 5 view .LVU24
+ 114              		.loc 1 366 27 is_stmt 0 view .LVU25
+ 115 0078 CDF80C90 		str	r9, [sp, #12]
+ 367:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+ 116              		.loc 1 367 5 is_stmt 1 view .LVU26
+ 117              		.loc 1 367 27 is_stmt 0 view .LVU27
+ 118 007c 0496     		str	r6, [sp, #16]
+ 368:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pull  = GPIO_NOPULL;
+ 119              		.loc 1 368 5 is_stmt 1 view .LVU28
+ 120              		.loc 1 368 27 is_stmt 0 view .LVU29
+ 121 007e 0594     		str	r4, [sp, #20]
+ 369:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+ 122              		.loc 1 369 5 is_stmt 1 view .LVU30
+ 123              		.loc 1 369 27 is_stmt 0 view .LVU31
+ 124 0080 0694     		str	r4, [sp, #24]
+ 370:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+ 125              		.loc 1 370 5 is_stmt 1 view .LVU32
+ 126 0082 2946     		mov	r1, r5
+ 127 0084 4046     		mov	r0, r8
+ 128 0086 FFF7FEFF 		bl	HAL_GPIO_Init
+ 129              	.LVL3:
+ 371:../../CM4/Core/Src/nuovo.c **** 
+ 372:../../CM4/Core/Src/nuovo.c ****     /* PB0 — green LED */
+ 373:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pin   = GPIO_PIN_0;
+ 130              		.loc 1 373 5 view .LVU33
+ 131              		.loc 1 373 27 is_stmt 0 view .LVU34
+ 132 008a 0396     		str	r6, [sp, #12]
+ 374:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+ 133              		.loc 1 374 5 is_stmt 1 view .LVU35
+ 134              		.loc 1 374 27 is_stmt 0 view .LVU36
+ 135 008c 0496     		str	r6, [sp, #16]
+ 375:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pull  = GPIO_NOPULL;
+ 136              		.loc 1 375 5 is_stmt 1 view .LVU37
+ 137              		.loc 1 375 27 is_stmt 0 view .LVU38
+ 138 008e 0594     		str	r4, [sp, #20]
+ 376:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 10
+
+
+ 139              		.loc 1 376 5 is_stmt 1 view .LVU39
+ 140              		.loc 1 376 27 is_stmt 0 view .LVU40
+ 141 0090 0694     		str	r4, [sp, #24]
+ 377:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+ 142              		.loc 1 377 5 is_stmt 1 view .LVU41
+ 143 0092 2946     		mov	r1, r5
+ 144 0094 3846     		mov	r0, r7
+ 145 0096 FFF7FEFF 		bl	HAL_GPIO_Init
+ 146              	.LVL4:
+ 378:../../CM4/Core/Src/nuovo.c **** 
+ 379:../../CM4/Core/Src/nuovo.c ****     /* PB14 — red LED */
+ 380:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pin   = GPIO_PIN_14;
+ 147              		.loc 1 380 5 view .LVU42
+ 148              		.loc 1 380 27 is_stmt 0 view .LVU43
+ 149 009a 4FF48043 		mov	r3, #16384
+ 150 009e 0393     		str	r3, [sp, #12]
+ 381:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+ 151              		.loc 1 381 5 is_stmt 1 view .LVU44
+ 152              		.loc 1 381 27 is_stmt 0 view .LVU45
+ 153 00a0 0496     		str	r6, [sp, #16]
+ 382:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Pull  = GPIO_NOPULL;
+ 154              		.loc 1 382 5 is_stmt 1 view .LVU46
+ 155              		.loc 1 382 27 is_stmt 0 view .LVU47
+ 156 00a2 0594     		str	r4, [sp, #20]
+ 383:../../CM4/Core/Src/nuovo.c ****     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+ 157              		.loc 1 383 5 is_stmt 1 view .LVU48
+ 158              		.loc 1 383 27 is_stmt 0 view .LVU49
+ 159 00a4 0694     		str	r4, [sp, #24]
+ 384:../../CM4/Core/Src/nuovo.c ****     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+ 160              		.loc 1 384 5 is_stmt 1 view .LVU50
+ 161 00a6 2946     		mov	r1, r5
+ 162 00a8 3846     		mov	r0, r7
+ 163 00aa FFF7FEFF 		bl	HAL_GPIO_Init
+ 164              	.LVL5:
+ 385:../../CM4/Core/Src/nuovo.c **** }
+ 165              		.loc 1 385 1 is_stmt 0 view .LVU51
+ 166 00ae 09B0     		add	sp, sp, #36
+ 167              	.LCFI2:
+ 168              		.cfi_def_cfa_offset 28
+ 169              		@ sp needed
+ 170 00b0 BDE8F083 		pop	{r4, r5, r6, r7, r8, r9, pc}
+ 171              	.L4:
+ 172              		.align	2
+ 173              	.L3:
+ 174 00b4 00440258 		.word	1476543488
+ 175 00b8 000C0258 		.word	1476529152
+ 176 00bc 00040258 		.word	1476527104
+ 177              		.cfi_endproc
+ 178              	.LFE139:
+ 180              		.section	.text.Error_Handler,"ax",%progbits
+ 181              		.align	1
+ 182              		.global	Error_Handler
+ 183              		.syntax unified
+ 184              		.thumb
+ 185              		.thumb_func
+ 187              	Error_Handler:
+ 188              	.LFB140:
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 11
+
+
+ 386:../../CM4/Core/Src/nuovo.c **** 
+ 387:../../CM4/Core/Src/nuovo.c **** void Error_Handler(void)
+ 388:../../CM4/Core/Src/nuovo.c **** {
+ 189              		.loc 1 388 1 is_stmt 1 view -0
+ 190              		.cfi_startproc
+ 191              		@ Volatile: function does not return.
+ 192              		@ args = 0, pretend = 0, frame = 8
+ 193              		@ frame_needed = 0, uses_anonymous_args = 0
+ 194              		@ link register save eliminated.
+ 195 0000 82B0     		sub	sp, sp, #8
+ 196              	.LCFI3:
+ 197              		.cfi_def_cfa_offset 8
+ 389:../../CM4/Core/Src/nuovo.c ****     __disable_irq();
+ 198              		.loc 1 389 5 view .LVU53
+ 199              	.LBB8:
+ 200              	.LBI8:
+ 201              		.file 2 "../../Drivers/CMSIS/Include/cmsis_gcc.h"
+   1:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /**************************************************************************//**
+   2:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * @file     cmsis_gcc.h
+   3:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * @brief    CMSIS compiler GCC header file
+   4:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * @version  V5.2.0
+   5:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * @date     08. May 2019
+   6:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  ******************************************************************************/
+   7:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /*
+   8:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * Copyright (c) 2009-2019 Arm Limited. All rights reserved.
+   9:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  *
+  10:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * SPDX-License-Identifier: Apache-2.0
+  11:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  *
+  12:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * Licensed under the Apache License, Version 2.0 (the License); you may
+  13:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * not use this file except in compliance with the License.
+  14:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * You may obtain a copy of the License at
+  15:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  *
+  16:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * www.apache.org/licenses/LICENSE-2.0
+  17:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  *
+  18:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * Unless required by applicable law or agreed to in writing, software
+  19:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+  20:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  21:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * See the License for the specific language governing permissions and
+  22:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  * limitations under the License.
+  23:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  24:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  25:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __CMSIS_GCC_H
+  26:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_H
+  27:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  28:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /* ignore some GCC warnings */
+  29:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic push
+  30:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wsign-conversion"
+  31:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wconversion"
+  32:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wunused-parameter"
+  33:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  34:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /* Fallback for __has_builtin */
+  35:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __has_builtin
+  36:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __has_builtin(x) (0)
+  37:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  38:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  39:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /* CMSIS compiler specific defines */
+  40:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __ASM
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 12
+
+
+  41:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __ASM                                  __asm
+  42:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  43:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __INLINE
+  44:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __INLINE                               inline
+  45:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  46:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __STATIC_INLINE
+  47:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __STATIC_INLINE                        static inline
+  48:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  49:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __STATIC_FORCEINLINE                 
+  50:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __STATIC_FORCEINLINE                   __attribute__((always_inline)) static inline
+  51:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif                                           
+  52:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __NO_RETURN
+  53:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __NO_RETURN                            __attribute__((__noreturn__))
+  54:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  55:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __USED
+  56:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __USED                                 __attribute__((used))
+  57:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  58:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __WEAK
+  59:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __WEAK                                 __attribute__((weak))
+  60:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  61:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __PACKED
+  62:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __PACKED                               __attribute__((packed, aligned(1)))
+  63:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  64:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __PACKED_STRUCT
+  65:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __PACKED_STRUCT                        struct __attribute__((packed, aligned(1)))
+  66:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  67:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __PACKED_UNION
+  68:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __PACKED_UNION                         union __attribute__((packed, aligned(1)))
+  69:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  70:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __UNALIGNED_UINT32        /* deprecated */
+  71:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic push
+  72:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wpacked"
+  73:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wattributes"
+  74:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   struct __attribute__((packed)) T_UINT32 { uint32_t v; };
+  75:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic pop
+  76:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __UNALIGNED_UINT32(x)                  (((struct T_UINT32 *)(x))->v)
+  77:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  78:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __UNALIGNED_UINT16_WRITE
+  79:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic push
+  80:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wpacked"
+  81:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wattributes"
+  82:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __PACKED_STRUCT T_UINT16_WRITE { uint16_t v; };
+  83:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic pop
+  84:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __UNALIGNED_UINT16_WRITE(addr, val)    (void)((((struct T_UINT16_WRITE *)(void *)(addr))-
+  85:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  86:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __UNALIGNED_UINT16_READ
+  87:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic push
+  88:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wpacked"
+  89:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wattributes"
+  90:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __PACKED_STRUCT T_UINT16_READ { uint16_t v; };
+  91:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic pop
+  92:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __UNALIGNED_UINT16_READ(addr)          (((const struct T_UINT16_READ *)(const void *)(add
+  93:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  94:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __UNALIGNED_UINT32_WRITE
+  95:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic push
+  96:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wpacked"
+  97:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wattributes"
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 13
+
+
+  98:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __PACKED_STRUCT T_UINT32_WRITE { uint32_t v; };
+  99:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic pop
+ 100:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __UNALIGNED_UINT32_WRITE(addr, val)    (void)((((struct T_UINT32_WRITE *)(void *)(addr))-
+ 101:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 102:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __UNALIGNED_UINT32_READ
+ 103:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic push
+ 104:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wpacked"
+ 105:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic ignored "-Wattributes"
+ 106:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __PACKED_STRUCT T_UINT32_READ { uint32_t v; };
+ 107:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #pragma GCC diagnostic pop
+ 108:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __UNALIGNED_UINT32_READ(addr)          (((const struct T_UINT32_READ *)(const void *)(add
+ 109:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 110:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __ALIGNED
+ 111:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __ALIGNED(x)                           __attribute__((aligned(x)))
+ 112:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 113:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __RESTRICT
+ 114:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __RESTRICT                             __restrict
+ 115:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 116:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef   __COMPILER_BARRIER
+ 117:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   #define __COMPILER_BARRIER()                   __ASM volatile("":::"memory")
+ 118:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 119:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 120:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /* #########################  Startup and Lowlevel Init  ######################## */
+ 121:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 122:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __PROGRAM_START
+ 123:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 124:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 125:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Initializes data and bss sections
+ 126:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \details This default implementations initialized all data and additional bss
+ 127:../../Drivers/CMSIS/Include/cmsis_gcc.h ****            sections relying on .copy.table and .zero.table specified properly
+ 128:../../Drivers/CMSIS/Include/cmsis_gcc.h ****            in the used linker script.
+ 129:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   
+ 130:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 131:../../Drivers/CMSIS/Include/cmsis_gcc.h **** __STATIC_FORCEINLINE __NO_RETURN void __cmsis_start(void)
+ 132:../../Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 133:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   extern void _start(void) __NO_RETURN;
+ 134:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   
+ 135:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   typedef struct {
+ 136:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     uint32_t const* src;
+ 137:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     uint32_t* dest;
+ 138:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     uint32_t  wlen;
+ 139:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   } __copy_table_t;
+ 140:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   
+ 141:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   typedef struct {
+ 142:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     uint32_t* dest;
+ 143:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     uint32_t  wlen;
+ 144:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   } __zero_table_t;
+ 145:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   
+ 146:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   extern const __copy_table_t __copy_table_start__;
+ 147:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   extern const __copy_table_t __copy_table_end__;
+ 148:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   extern const __zero_table_t __zero_table_start__;
+ 149:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   extern const __zero_table_t __zero_table_end__;
+ 150:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 151:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   for (__copy_table_t const* pTable = &__copy_table_start__; pTable < &__copy_table_end__; ++pTable
+ 152:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     for(uint32_t i=0u; i<pTable->wlen; ++i) {
+ 153:../../Drivers/CMSIS/Include/cmsis_gcc.h ****       pTable->dest[i] = pTable->src[i];
+ 154:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     }
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 14
+
+
+ 155:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   }
+ 156:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  
+ 157:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   for (__zero_table_t const* pTable = &__zero_table_start__; pTable < &__zero_table_end__; ++pTable
+ 158:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     for(uint32_t i=0u; i<pTable->wlen; ++i) {
+ 159:../../Drivers/CMSIS/Include/cmsis_gcc.h ****       pTable->dest[i] = 0u;
+ 160:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     }
+ 161:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   }
+ 162:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  
+ 163:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   _start();
+ 164:../../Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 165:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   
+ 166:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __PROGRAM_START           __cmsis_start
+ 167:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 168:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 169:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __INITIAL_SP
+ 170:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __INITIAL_SP              __StackTop
+ 171:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 172:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 173:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __STACK_LIMIT
+ 174:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __STACK_LIMIT             __StackLimit
+ 175:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 176:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 177:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __VECTOR_TABLE
+ 178:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __VECTOR_TABLE            __Vectors
+ 179:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 180:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 181:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __VECTOR_TABLE_ATTRIBUTE
+ 182:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #define __VECTOR_TABLE_ATTRIBUTE  __attribute((used, section(".vectors")))
+ 183:../../Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 184:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 185:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /* ###########################  Core Function Access  ########################### */
+ 186:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+ 187:../../Drivers/CMSIS/Include/cmsis_gcc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+ 188:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   @{
+ 189:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 190:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 191:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 192:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Enable IRQ Interrupts
+ 193:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
+ 194:../../Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 195:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 196:../../Drivers/CMSIS/Include/cmsis_gcc.h **** __STATIC_FORCEINLINE void __enable_irq(void)
+ 197:../../Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 198:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+ 199:../../Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 200:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 201:../../Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 202:../../Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 203:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Disable IRQ Interrupts
+ 204:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
+ 205:../../Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 206:../../Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 207:../../Drivers/CMSIS/Include/cmsis_gcc.h **** __STATIC_FORCEINLINE void __disable_irq(void)
+ 202              		.loc 2 207 27 view .LVU54
+ 203              	.LBB9:
+ 208:../../Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 209:../../Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 15
+
+
+ 204              		.loc 2 209 3 view .LVU55
+ 205              		.syntax unified
+ 206              	@ 209 "../../Drivers/CMSIS/Include/cmsis_gcc.h" 1
+ 207 0002 72B6     		cpsid i
+ 208              	@ 0 "" 2
+ 210:../../Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 209              		.loc 2 210 1 is_stmt 0 view .LVU56
+ 210              		.thumb
+ 211              		.syntax unified
+ 212 0004 10E0     		b	.L10
+ 213              	.L7:
+ 214              	.LBE9:
+ 215              	.LBE8:
+ 216              	.LBB10:
+ 390:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ 391:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON();  BUSY(500000);
+ 217              		.loc 1 391 24 is_stmt 1 discriminator 3 view .LVU57
+ 218 0006 009B     		ldr	r3, [sp]
+ 219 0008 0133     		adds	r3, r3, #1
+ 220 000a 0093     		str	r3, [sp]
+ 221              	.L6:
+ 222              		.loc 1 391 24 discriminator 1 view .LVU58
+ 223 000c 009A     		ldr	r2, [sp]
+ 224 000e 0C4B     		ldr	r3, .L12
+ 225 0010 9A42     		cmp	r2, r3
+ 226 0012 F8DD     		ble	.L7
+ 227              	.LBE10:
+ 228              		.loc 1 391 24 view .LVU59
+ 392:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); BUSY(500000);
+ 229              		.loc 1 392 9 view .LVU60
+ 230 0014 0B4B     		ldr	r3, .L12+4
+ 231 0016 4FF08042 		mov	r2, #1073741824
+ 232 001a 9A61     		str	r2, [r3, #24]
+ 233              		.loc 1 392 24 view .LVU61
+ 234              		.loc 1 392 24 view .LVU62
+ 235              	.LBB11:
+ 236              		.loc 1 392 24 view .LVU63
+ 237 001c 0023     		movs	r3, #0
+ 238 001e 0193     		str	r3, [sp, #4]
+ 239              	.L8:
+ 240              		.loc 1 392 24 discriminator 1 view .LVU64
+ 241 0020 019A     		ldr	r2, [sp, #4]
+ 242 0022 074B     		ldr	r3, .L12
+ 243 0024 9A42     		cmp	r2, r3
+ 244 0026 06DD     		ble	.L9
+ 245              	.L10:
+ 246              	.LBE11:
+ 390:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ 247              		.loc 1 390 5 view .LVU65
+ 391:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); BUSY(500000);
+ 248              		.loc 1 391 9 view .LVU66
+ 249 0028 064B     		ldr	r3, .L12+4
+ 250 002a 4FF48042 		mov	r2, #16384
+ 251 002e 9A61     		str	r2, [r3, #24]
+ 391:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); BUSY(500000);
+ 252              		.loc 1 391 24 view .LVU67
+ 391:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); BUSY(500000);
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 16
+
+
+ 253              		.loc 1 391 24 view .LVU68
+ 254              	.LBB12:
+ 391:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); BUSY(500000);
+ 255              		.loc 1 391 24 view .LVU69
+ 256 0030 0023     		movs	r3, #0
+ 257 0032 0093     		str	r3, [sp]
+ 258 0034 EAE7     		b	.L6
+ 259              	.L9:
+ 260              	.LBE12:
+ 261              	.LBB13:
+ 262              		.loc 1 392 24 discriminator 3 view .LVU70
+ 263 0036 019B     		ldr	r3, [sp, #4]
+ 264 0038 0133     		adds	r3, r3, #1
+ 265 003a 0193     		str	r3, [sp, #4]
+ 266 003c F0E7     		b	.L8
+ 267              	.L13:
+ 268 003e 00BF     		.align	2
+ 269              	.L12:
+ 270 0040 1FA10700 		.word	499999
+ 271 0044 00040258 		.word	1476527104
+ 272              	.LBE13:
+ 273              		.cfi_endproc
+ 274              	.LFE140:
+ 276              		.section	.text.SystemClock_Config,"ax",%progbits
+ 277              		.align	1
+ 278              		.syntax unified
+ 279              		.thumb
+ 280              		.thumb_func
+ 282              	SystemClock_Config:
+ 283              	.LFB137:
+ 290:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+ 284              		.loc 1 290 1 view -0
+ 285              		.cfi_startproc
+ 286              		@ args = 0, pretend = 0, frame = 112
+ 287              		@ frame_needed = 0, uses_anonymous_args = 0
+ 288 0000 00B5     		push	{lr}
+ 289              	.LCFI4:
+ 290              		.cfi_def_cfa_offset 4
+ 291              		.cfi_offset 14, -4
+ 292 0002 9DB0     		sub	sp, sp, #116
+ 293              	.LCFI5:
+ 294              		.cfi_def_cfa_offset 120
+ 291:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ 295              		.loc 1 291 5 view .LVU72
+ 291:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ 296              		.loc 1 291 24 is_stmt 0 view .LVU73
+ 297 0004 4C22     		movs	r2, #76
+ 298 0006 0021     		movs	r1, #0
+ 299 0008 09A8     		add	r0, sp, #36
+ 300 000a FFF7FEFF 		bl	memset
+ 301              	.LVL6:
+ 292:../../CM4/Core/Src/nuovo.c **** 
+ 302              		.loc 1 292 5 is_stmt 1 view .LVU74
+ 292:../../CM4/Core/Src/nuovo.c **** 
+ 303              		.loc 1 292 24 is_stmt 0 view .LVU75
+ 304 000e 2022     		movs	r2, #32
+ 305 0010 0021     		movs	r1, #0
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 17
+
+
+ 306 0012 01A8     		add	r0, sp, #4
+ 307 0014 FFF7FEFF 		bl	memset
+ 308              	.LVL7:
+ 294:../../CM4/Core/Src/nuovo.c ****     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+ 309              		.loc 1 294 5 is_stmt 1 view .LVU76
+ 310 0018 0420     		movs	r0, #4
+ 311 001a FFF7FEFF 		bl	HAL_PWREx_ConfigSupply
+ 312              	.LVL8:
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 313              		.loc 1 295 5 view .LVU77
+ 314              	.LBB14:
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 315              		.loc 1 295 5 view .LVU78
+ 316 001e 0023     		movs	r3, #0
+ 317 0020 0093     		str	r3, [sp]
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 318              		.loc 1 295 5 view .LVU79
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 319              		.loc 1 295 5 discriminator 2 view .LVU80
+ 320 0022 284B     		ldr	r3, .L21
+ 321 0024 DA6A     		ldr	r2, [r3, #44]
+ 322 0026 22F00102 		bic	r2, r2, #1
+ 323 002a DA62     		str	r2, [r3, #44]
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 324              		.loc 1 295 5 view .LVU81
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 325              		.loc 1 295 5 is_stmt 0 discriminator 2 view .LVU82
+ 326 002c DB6A     		ldr	r3, [r3, #44]
+ 327 002e 03F00103 		and	r3, r3, #1
+ 328 0032 0093     		str	r3, [sp]
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 329              		.loc 1 295 5 is_stmt 1 view .LVU83
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 330              		.loc 1 295 5 is_stmt 0 discriminator 2 view .LVU84
+ 331 0034 244A     		ldr	r2, .L21+4
+ 332 0036 9369     		ldr	r3, [r2, #24]
+ 333 0038 23F44043 		bic	r3, r3, #49152
+ 334 003c 43F40043 		orr	r3, r3, #32768
+ 335 0040 9361     		str	r3, [r2, #24]
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 336              		.loc 1 295 5 is_stmt 1 view .LVU85
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 337              		.loc 1 295 5 is_stmt 0 discriminator 2 view .LVU86
+ 338 0042 9369     		ldr	r3, [r2, #24]
+ 339 0044 03F44043 		and	r3, r3, #49152
+ 340 0048 0093     		str	r3, [sp]
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 341              		.loc 1 295 5 is_stmt 1 discriminator 4 view .LVU87
+ 342 004a 009B     		ldr	r3, [sp]
+ 343              	.LBE14:
+ 295:../../CM4/Core/Src/nuovo.c ****     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY));
+ 344              		.loc 1 295 5 view .LVU88
+ 296:../../CM4/Core/Src/nuovo.c **** 
+ 345              		.loc 1 296 5 view .LVU89
+ 346              	.L15:
+ 296:../../CM4/Core/Src/nuovo.c **** 
+ 347              		.loc 1 296 12 discriminator 1 view .LVU90
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 18
+
+
+ 296:../../CM4/Core/Src/nuovo.c **** 
+ 348              		.loc 1 296 13 is_stmt 0 discriminator 1 view .LVU91
+ 349 004c 1E4B     		ldr	r3, .L21+4
+ 350 004e 9B69     		ldr	r3, [r3, #24]
+ 296:../../CM4/Core/Src/nuovo.c **** 
+ 351              		.loc 1 296 12 discriminator 1 view .LVU92
+ 352 0050 13F4005F 		tst	r3, #8192
+ 353 0054 FAD0     		beq	.L15
+ 298:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSIState            = RCC_HSI_DIV1;
+ 354              		.loc 1 298 5 is_stmt 1 view .LVU93
+ 298:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSIState            = RCC_HSI_DIV1;
+ 355              		.loc 1 298 43 is_stmt 0 view .LVU94
+ 356 0056 0223     		movs	r3, #2
+ 357 0058 0993     		str	r3, [sp, #36]
+ 299:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+ 358              		.loc 1 299 5 is_stmt 1 view .LVU95
+ 299:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+ 359              		.loc 1 299 43 is_stmt 0 view .LVU96
+ 360 005a 0122     		movs	r2, #1
+ 361 005c 0C92     		str	r2, [sp, #48]
+ 300:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+ 362              		.loc 1 300 5 is_stmt 1 view .LVU97
+ 300:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+ 363              		.loc 1 300 43 is_stmt 0 view .LVU98
+ 364 005e 4022     		movs	r2, #64
+ 365 0060 0D92     		str	r2, [sp, #52]
+ 301:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+ 366              		.loc 1 301 5 is_stmt 1 view .LVU99
+ 301:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+ 367              		.loc 1 301 43 is_stmt 0 view .LVU100
+ 368 0062 1293     		str	r3, [sp, #72]
+ 302:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLM            = 4;
+ 369              		.loc 1 302 5 is_stmt 1 view .LVU101
+ 302:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLM            = 4;
+ 370              		.loc 1 302 43 is_stmt 0 view .LVU102
+ 371 0064 0022     		movs	r2, #0
+ 372 0066 1392     		str	r2, [sp, #76]
+ 303:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLN            = 28;
+ 373              		.loc 1 303 5 is_stmt 1 view .LVU103
+ 303:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLN            = 28;
+ 374              		.loc 1 303 43 is_stmt 0 view .LVU104
+ 375 0068 0421     		movs	r1, #4
+ 376 006a 1491     		str	r1, [sp, #80]
+ 304:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLP            = 2;
+ 377              		.loc 1 304 5 is_stmt 1 view .LVU105
+ 304:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLP            = 2;
+ 378              		.loc 1 304 43 is_stmt 0 view .LVU106
+ 379 006c 1C21     		movs	r1, #28
+ 380 006e 1591     		str	r1, [sp, #84]
+ 305:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLQ            = 5;
+ 381              		.loc 1 305 5 is_stmt 1 view .LVU107
+ 305:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLQ            = 5;
+ 382              		.loc 1 305 43 is_stmt 0 view .LVU108
+ 383 0070 1693     		str	r3, [sp, #88]
+ 306:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLR            = 2;
+ 384              		.loc 1 306 5 is_stmt 1 view .LVU109
+ 306:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLR            = 2;
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 19
+
+
+ 385              		.loc 1 306 43 is_stmt 0 view .LVU110
+ 386 0072 0521     		movs	r1, #5
+ 387 0074 1791     		str	r1, [sp, #92]
+ 307:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLRGE          = RCC_PLL1VCIRANGE_3;
+ 388              		.loc 1 307 5 is_stmt 1 view .LVU111
+ 307:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLRGE          = RCC_PLL1VCIRANGE_3;
+ 389              		.loc 1 307 43 is_stmt 0 view .LVU112
+ 390 0076 1893     		str	r3, [sp, #96]
+ 308:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLVCOSEL       = RCC_PLL1VCOWIDE;
+ 391              		.loc 1 308 5 is_stmt 1 view .LVU113
+ 308:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLVCOSEL       = RCC_PLL1VCOWIDE;
+ 392              		.loc 1 308 43 is_stmt 0 view .LVU114
+ 393 0078 0C23     		movs	r3, #12
+ 394 007a 1993     		str	r3, [sp, #100]
+ 309:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLFRACN        = 1024;
+ 395              		.loc 1 309 5 is_stmt 1 view .LVU115
+ 309:../../CM4/Core/Src/nuovo.c ****     RCC_OscInitStruct.PLL.PLLFRACN        = 1024;
+ 396              		.loc 1 309 43 is_stmt 0 view .LVU116
+ 397 007c 1A92     		str	r2, [sp, #104]
+ 310:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) { Error_Handler(); }
+ 398              		.loc 1 310 5 is_stmt 1 view .LVU117
+ 310:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) { Error_Handler(); }
+ 399              		.loc 1 310 43 is_stmt 0 view .LVU118
+ 400 007e 4FF48063 		mov	r3, #1024
+ 401 0082 1B93     		str	r3, [sp, #108]
+ 311:../../CM4/Core/Src/nuovo.c **** 
+ 402              		.loc 1 311 5 is_stmt 1 view .LVU119
+ 311:../../CM4/Core/Src/nuovo.c **** 
+ 403              		.loc 1 311 9 is_stmt 0 view .LVU120
+ 404 0084 09A8     		add	r0, sp, #36
+ 405 0086 FFF7FEFF 		bl	HAL_RCC_OscConfig
+ 406              	.LVL9:
+ 311:../../CM4/Core/Src/nuovo.c **** 
+ 407              		.loc 1 311 8 discriminator 1 view .LVU121
+ 408 008a B0B9     		cbnz	r0, .L19
+ 313:../../CM4/Core/Src/nuovo.c ****                                        RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  |
+ 409              		.loc 1 313 5 is_stmt 1 view .LVU122
+ 313:../../CM4/Core/Src/nuovo.c ****                                        RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  |
+ 410              		.loc 1 313 38 is_stmt 0 view .LVU123
+ 411 008c 3F23     		movs	r3, #63
+ 412 008e 0193     		str	r3, [sp, #4]
+ 316:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
+ 413              		.loc 1 316 5 is_stmt 1 view .LVU124
+ 316:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
+ 414              		.loc 1 316 38 is_stmt 0 view .LVU125
+ 415 0090 0323     		movs	r3, #3
+ 416 0092 0293     		str	r3, [sp, #8]
+ 317:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
+ 417              		.loc 1 317 5 is_stmt 1 view .LVU126
+ 317:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
+ 418              		.loc 1 317 38 is_stmt 0 view .LVU127
+ 419 0094 0023     		movs	r3, #0
+ 420 0096 0393     		str	r3, [sp, #12]
+ 318:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+ 421              		.loc 1 318 5 is_stmt 1 view .LVU128
+ 318:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+ 422              		.loc 1 318 38 is_stmt 0 view .LVU129
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 20
+
+
+ 423 0098 0493     		str	r3, [sp, #16]
+ 319:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+ 424              		.loc 1 319 5 is_stmt 1 view .LVU130
+ 319:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+ 425              		.loc 1 319 38 is_stmt 0 view .LVU131
+ 426 009a 4023     		movs	r3, #64
+ 427 009c 0693     		str	r3, [sp, #24]
+ 320:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+ 428              		.loc 1 320 5 is_stmt 1 view .LVU132
+ 320:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+ 429              		.loc 1 320 38 is_stmt 0 view .LVU133
+ 430 009e 4FF48062 		mov	r2, #1024
+ 431 00a2 0792     		str	r2, [sp, #28]
+ 321:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
+ 432              		.loc 1 321 5 is_stmt 1 view .LVU134
+ 321:../../CM4/Core/Src/nuovo.c ****     RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
+ 433              		.loc 1 321 38 is_stmt 0 view .LVU135
+ 434 00a4 0593     		str	r3, [sp, #20]
+ 322:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) { Error_Handler(); }
+ 435              		.loc 1 322 5 is_stmt 1 view .LVU136
+ 322:../../CM4/Core/Src/nuovo.c ****     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) { Error_Handler(); }
+ 436              		.loc 1 322 38 is_stmt 0 view .LVU137
+ 437 00a6 0893     		str	r3, [sp, #32]
+ 323:../../CM4/Core/Src/nuovo.c **** }
+ 438              		.loc 1 323 5 is_stmt 1 view .LVU138
+ 323:../../CM4/Core/Src/nuovo.c **** }
+ 439              		.loc 1 323 9 is_stmt 0 view .LVU139
+ 440 00a8 0421     		movs	r1, #4
+ 441 00aa 0DEB0100 		add	r0, sp, r1
+ 442 00ae FFF7FEFF 		bl	HAL_RCC_ClockConfig
+ 443              	.LVL10:
+ 323:../../CM4/Core/Src/nuovo.c **** }
+ 444              		.loc 1 323 8 discriminator 1 view .LVU140
+ 445 00b2 20B9     		cbnz	r0, .L20
+ 324:../../CM4/Core/Src/nuovo.c **** 
+ 446              		.loc 1 324 1 view .LVU141
+ 447 00b4 1DB0     		add	sp, sp, #116
+ 448              	.LCFI6:
+ 449              		.cfi_remember_state
+ 450              		.cfi_def_cfa_offset 4
+ 451              		@ sp needed
+ 452 00b6 5DF804FB 		ldr	pc, [sp], #4
+ 453              	.L19:
+ 454              	.LCFI7:
+ 455              		.cfi_restore_state
+ 311:../../CM4/Core/Src/nuovo.c **** 
+ 456              		.loc 1 311 60 is_stmt 1 discriminator 1 view .LVU142
+ 457 00ba FFF7FEFF 		bl	Error_Handler
+ 458              	.LVL11:
+ 459              	.L20:
+ 323:../../CM4/Core/Src/nuovo.c **** }
+ 460              		.loc 1 323 79 discriminator 1 view .LVU143
+ 461 00be FFF7FEFF 		bl	Error_Handler
+ 462              	.LVL12:
+ 463              	.L22:
+ 464 00c2 00BF     		.align	2
+ 465              	.L21:
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 21
+
+
+ 466 00c4 00040058 		.word	1476396032
+ 467 00c8 00480258 		.word	1476544512
+ 468              		.cfi_endproc
+ 469              	.LFE137:
+ 471              		.section	.text.MX_TIM2_Init,"ax",%progbits
+ 472              		.align	1
+ 473              		.syntax unified
+ 474              		.thumb
+ 475              		.thumb_func
+ 477              	MX_TIM2_Init:
+ 478              	.LFB138:
+ 327:../../CM4/Core/Src/nuovo.c ****     __HAL_RCC_TIM2_CLK_ENABLE();
+ 479              		.loc 1 327 1 view -0
+ 480              		.cfi_startproc
+ 481              		@ args = 0, pretend = 0, frame = 32
+ 482              		@ frame_needed = 0, uses_anonymous_args = 0
+ 483 0000 00B5     		push	{lr}
+ 484              	.LCFI8:
+ 485              		.cfi_def_cfa_offset 4
+ 486              		.cfi_offset 14, -4
+ 487 0002 89B0     		sub	sp, sp, #36
+ 488              	.LCFI9:
+ 489              		.cfi_def_cfa_offset 40
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 490              		.loc 1 328 5 view .LVU145
+ 491              	.LBB15:
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 492              		.loc 1 328 5 view .LVU146
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 493              		.loc 1 328 5 view .LVU147
+ 494 0004 1D4B     		ldr	r3, .L31
+ 495 0006 D3F8E820 		ldr	r2, [r3, #232]
+ 496 000a 42F00102 		orr	r2, r2, #1
+ 497 000e C3F8E820 		str	r2, [r3, #232]
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 498              		.loc 1 328 5 view .LVU148
+ 499 0012 D3F8E830 		ldr	r3, [r3, #232]
+ 500 0016 03F00103 		and	r3, r3, #1
+ 501 001a 0093     		str	r3, [sp]
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 502              		.loc 1 328 5 view .LVU149
+ 503 001c 009B     		ldr	r3, [sp]
+ 504              	.LBE15:
+ 328:../../CM4/Core/Src/nuovo.c **** 
+ 505              		.loc 1 328 5 view .LVU150
+ 330:../../CM4/Core/Src/nuovo.c ****     TIM_MasterConfigTypeDef sMasterConfig      = {0};
+ 506              		.loc 1 330 5 view .LVU151
+ 330:../../CM4/Core/Src/nuovo.c ****     TIM_MasterConfigTypeDef sMasterConfig      = {0};
+ 507              		.loc 1 330 29 is_stmt 0 view .LVU152
+ 508 001e 0023     		movs	r3, #0
+ 509 0020 0493     		str	r3, [sp, #16]
+ 510 0022 0593     		str	r3, [sp, #20]
+ 511 0024 0693     		str	r3, [sp, #24]
+ 512 0026 0793     		str	r3, [sp, #28]
+ 331:../../CM4/Core/Src/nuovo.c **** 
+ 513              		.loc 1 331 5 is_stmt 1 view .LVU153
+ 331:../../CM4/Core/Src/nuovo.c **** 
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 22
+
+
+ 514              		.loc 1 331 29 is_stmt 0 view .LVU154
+ 515 0028 0193     		str	r3, [sp, #4]
+ 516 002a 0293     		str	r3, [sp, #8]
+ 517 002c 0393     		str	r3, [sp, #12]
+ 333:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Prescaler         = 0;
+ 518              		.loc 1 333 5 is_stmt 1 view .LVU155
+ 333:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Prescaler         = 0;
+ 519              		.loc 1 333 34 is_stmt 0 view .LVU156
+ 520 002e 1448     		ldr	r0, .L31+4
+ 521 0030 4FF08042 		mov	r2, #1073741824
+ 522 0034 0260     		str	r2, [r0]
+ 334:../../CM4/Core/Src/nuovo.c ****     htim2.Init.CounterMode       = TIM_COUNTERMODE_UP;
+ 523              		.loc 1 334 5 is_stmt 1 view .LVU157
+ 334:../../CM4/Core/Src/nuovo.c ****     htim2.Init.CounterMode       = TIM_COUNTERMODE_UP;
+ 524              		.loc 1 334 34 is_stmt 0 view .LVU158
+ 525 0036 4360     		str	r3, [r0, #4]
+ 335:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Period            = 0xFFFFFFFFU;
+ 526              		.loc 1 335 5 is_stmt 1 view .LVU159
+ 335:../../CM4/Core/Src/nuovo.c ****     htim2.Init.Period            = 0xFFFFFFFFU;
+ 527              		.loc 1 335 34 is_stmt 0 view .LVU160
+ 528 0038 8360     		str	r3, [r0, #8]
+ 336:../../CM4/Core/Src/nuovo.c ****     htim2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+ 529              		.loc 1 336 5 is_stmt 1 view .LVU161
+ 336:../../CM4/Core/Src/nuovo.c ****     htim2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+ 530              		.loc 1 336 34 is_stmt 0 view .LVU162
+ 531 003a 4FF0FF32 		mov	r2, #-1
+ 532 003e C260     		str	r2, [r0, #12]
+ 337:../../CM4/Core/Src/nuovo.c ****     htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+ 533              		.loc 1 337 5 is_stmt 1 view .LVU163
+ 337:../../CM4/Core/Src/nuovo.c ****     htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+ 534              		.loc 1 337 34 is_stmt 0 view .LVU164
+ 535 0040 0361     		str	r3, [r0, #16]
+ 338:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_Base_Init(&htim2) != HAL_OK) { Error_Handler(); }
+ 536              		.loc 1 338 5 is_stmt 1 view .LVU165
+ 338:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_Base_Init(&htim2) != HAL_OK) { Error_Handler(); }
+ 537              		.loc 1 338 34 is_stmt 0 view .LVU166
+ 538 0042 8361     		str	r3, [r0, #24]
+ 339:../../CM4/Core/Src/nuovo.c **** 
+ 539              		.loc 1 339 5 is_stmt 1 view .LVU167
+ 339:../../CM4/Core/Src/nuovo.c **** 
+ 540              		.loc 1 339 9 is_stmt 0 view .LVU168
+ 541 0044 FFF7FEFF 		bl	HAL_TIM_Base_Init
+ 542              	.LVL13:
+ 339:../../CM4/Core/Src/nuovo.c **** 
+ 543              		.loc 1 339 8 discriminator 1 view .LVU169
+ 544 0048 90B9     		cbnz	r0, .L28
+ 341:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) { Error_Handler(); }
+ 545              		.loc 1 341 5 is_stmt 1 view .LVU170
+ 341:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) { Error_Handler(); }
+ 546              		.loc 1 341 36 is_stmt 0 view .LVU171
+ 547 004a 4FF48053 		mov	r3, #4096
+ 548 004e 0493     		str	r3, [sp, #16]
+ 342:../../CM4/Core/Src/nuovo.c **** 
+ 549              		.loc 1 342 5 is_stmt 1 view .LVU172
+ 342:../../CM4/Core/Src/nuovo.c **** 
+ 550              		.loc 1 342 9 is_stmt 0 view .LVU173
+ 551 0050 04A9     		add	r1, sp, #16
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 23
+
+
+ 552 0052 0B48     		ldr	r0, .L31+4
+ 553 0054 FFF7FEFF 		bl	HAL_TIM_ConfigClockSource
+ 554              	.LVL14:
+ 342:../../CM4/Core/Src/nuovo.c **** 
+ 555              		.loc 1 342 8 discriminator 1 view .LVU174
+ 556 0058 60B9     		cbnz	r0, .L29
+ 344:../../CM4/Core/Src/nuovo.c ****     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+ 557              		.loc 1 344 5 is_stmt 1 view .LVU175
+ 344:../../CM4/Core/Src/nuovo.c ****     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+ 558              		.loc 1 344 39 is_stmt 0 view .LVU176
+ 559 005a 0023     		movs	r3, #0
+ 560 005c 0193     		str	r3, [sp, #4]
+ 345:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) { Error_Handler();
+ 561              		.loc 1 345 5 is_stmt 1 view .LVU177
+ 345:../../CM4/Core/Src/nuovo.c ****     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) { Error_Handler();
+ 562              		.loc 1 345 39 is_stmt 0 view .LVU178
+ 563 005e 0393     		str	r3, [sp, #12]
+ 346:../../CM4/Core/Src/nuovo.c **** }
+ 564              		.loc 1 346 5 is_stmt 1 view .LVU179
+ 346:../../CM4/Core/Src/nuovo.c **** }
+ 565              		.loc 1 346 9 is_stmt 0 view .LVU180
+ 566 0060 01A9     		add	r1, sp, #4
+ 567 0062 0748     		ldr	r0, .L31+4
+ 568 0064 FFF7FEFF 		bl	HAL_TIMEx_MasterConfigSynchronization
+ 569              	.LVL15:
+ 346:../../CM4/Core/Src/nuovo.c **** }
+ 570              		.loc 1 346 8 discriminator 1 view .LVU181
+ 571 0068 30B9     		cbnz	r0, .L30
+ 347:../../CM4/Core/Src/nuovo.c **** 
+ 572              		.loc 1 347 1 view .LVU182
+ 573 006a 09B0     		add	sp, sp, #36
+ 574              	.LCFI10:
+ 575              		.cfi_remember_state
+ 576              		.cfi_def_cfa_offset 4
+ 577              		@ sp needed
+ 578 006c 5DF804FB 		ldr	pc, [sp], #4
+ 579              	.L28:
+ 580              	.LCFI11:
+ 581              		.cfi_restore_state
+ 339:../../CM4/Core/Src/nuovo.c **** 
+ 582              		.loc 1 339 48 is_stmt 1 discriminator 1 view .LVU183
+ 583 0070 FFF7FEFF 		bl	Error_Handler
+ 584              	.LVL16:
+ 585              	.L29:
+ 342:../../CM4/Core/Src/nuovo.c **** 
+ 586              		.loc 1 342 77 discriminator 1 view .LVU184
+ 587 0074 FFF7FEFF 		bl	Error_Handler
+ 588              	.LVL17:
+ 589              	.L30:
+ 346:../../CM4/Core/Src/nuovo.c **** }
+ 590              		.loc 1 346 84 discriminator 1 view .LVU185
+ 591 0078 FFF7FEFF 		bl	Error_Handler
+ 592              	.LVL18:
+ 593              	.L32:
+ 594              		.align	2
+ 595              	.L31:
+ 596 007c 00440258 		.word	1476543488
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 24
+
+
+ 597 0080 00000000 		.word	htim2
+ 598              		.cfi_endproc
+ 599              	.LFE138:
+ 601              		.section	.text.MX_UART4_Init,"ax",%progbits
+ 602              		.align	1
+ 603              		.syntax unified
+ 604              		.thumb
+ 605              		.thumb_func
+ 607              	MX_UART4_Init:
+ 608              	.LFB136:
+ 243:../../CM4/Core/Src/nuovo.c **** 
+ 609              		.loc 1 243 1 view -0
+ 610              		.cfi_startproc
+ 611              		@ args = 0, pretend = 0, frame = 0
+ 612              		@ frame_needed = 0, uses_anonymous_args = 0
+ 613 0000 08B5     		push	{r3, lr}
+ 614              	.LCFI12:
+ 615              		.cfi_def_cfa_offset 8
+ 616              		.cfi_offset 3, -8
+ 617              		.cfi_offset 14, -4
+ 252:../../CM4/Core/Src/nuovo.c ****   huart4.Init.BaudRate = 115200;
+ 618              		.loc 1 252 3 view .LVU187
+ 252:../../CM4/Core/Src/nuovo.c ****   huart4.Init.BaudRate = 115200;
+ 619              		.loc 1 252 19 is_stmt 0 view .LVU188
+ 620 0002 1548     		ldr	r0, .L43
+ 621 0004 154B     		ldr	r3, .L43+4
+ 622 0006 0360     		str	r3, [r0]
+ 253:../../CM4/Core/Src/nuovo.c ****   huart4.Init.WordLength = UART_WORDLENGTH_8B;
+ 623              		.loc 1 253 3 is_stmt 1 view .LVU189
+ 253:../../CM4/Core/Src/nuovo.c ****   huart4.Init.WordLength = UART_WORDLENGTH_8B;
+ 624              		.loc 1 253 24 is_stmt 0 view .LVU190
+ 625 0008 4FF4E133 		mov	r3, #115200
+ 626 000c 4360     		str	r3, [r0, #4]
+ 254:../../CM4/Core/Src/nuovo.c ****   huart4.Init.StopBits = UART_STOPBITS_1;
+ 627              		.loc 1 254 3 is_stmt 1 view .LVU191
+ 254:../../CM4/Core/Src/nuovo.c ****   huart4.Init.StopBits = UART_STOPBITS_1;
+ 628              		.loc 1 254 26 is_stmt 0 view .LVU192
+ 629 000e 0023     		movs	r3, #0
+ 630 0010 8360     		str	r3, [r0, #8]
+ 255:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Parity = UART_PARITY_NONE;
+ 631              		.loc 1 255 3 is_stmt 1 view .LVU193
+ 255:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Parity = UART_PARITY_NONE;
+ 632              		.loc 1 255 24 is_stmt 0 view .LVU194
+ 633 0012 C360     		str	r3, [r0, #12]
+ 256:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Mode = UART_MODE_TX_RX;
+ 634              		.loc 1 256 3 is_stmt 1 view .LVU195
+ 256:../../CM4/Core/Src/nuovo.c ****   huart4.Init.Mode = UART_MODE_TX_RX;
+ 635              		.loc 1 256 22 is_stmt 0 view .LVU196
+ 636 0014 0361     		str	r3, [r0, #16]
+ 257:../../CM4/Core/Src/nuovo.c ****   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+ 637              		.loc 1 257 3 is_stmt 1 view .LVU197
+ 257:../../CM4/Core/Src/nuovo.c ****   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+ 638              		.loc 1 257 20 is_stmt 0 view .LVU198
+ 639 0016 0C22     		movs	r2, #12
+ 640 0018 4261     		str	r2, [r0, #20]
+ 258:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+ 641              		.loc 1 258 3 is_stmt 1 view .LVU199
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 25
+
+
+ 258:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+ 642              		.loc 1 258 25 is_stmt 0 view .LVU200
+ 643 001a 8361     		str	r3, [r0, #24]
+ 259:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+ 644              		.loc 1 259 3 is_stmt 1 view .LVU201
+ 259:../../CM4/Core/Src/nuovo.c ****   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+ 645              		.loc 1 259 28 is_stmt 0 view .LVU202
+ 646 001c C361     		str	r3, [r0, #28]
+ 260:../../CM4/Core/Src/nuovo.c ****   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+ 647              		.loc 1 260 3 is_stmt 1 view .LVU203
+ 260:../../CM4/Core/Src/nuovo.c ****   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+ 648              		.loc 1 260 30 is_stmt 0 view .LVU204
+ 649 001e 0362     		str	r3, [r0, #32]
+ 261:../../CM4/Core/Src/nuovo.c ****   huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+ 650              		.loc 1 261 3 is_stmt 1 view .LVU205
+ 261:../../CM4/Core/Src/nuovo.c ****   huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+ 651              		.loc 1 261 30 is_stmt 0 view .LVU206
+ 652 0020 4362     		str	r3, [r0, #36]
+ 262:../../CM4/Core/Src/nuovo.c ****   if (HAL_UART_Init(&huart4) != HAL_OK)
+ 653              		.loc 1 262 3 is_stmt 1 view .LVU207
+ 262:../../CM4/Core/Src/nuovo.c ****   if (HAL_UART_Init(&huart4) != HAL_OK)
+ 654              		.loc 1 262 38 is_stmt 0 view .LVU208
+ 655 0022 8362     		str	r3, [r0, #40]
+ 263:../../CM4/Core/Src/nuovo.c ****   {
+ 656              		.loc 1 263 3 is_stmt 1 view .LVU209
+ 263:../../CM4/Core/Src/nuovo.c ****   {
+ 657              		.loc 1 263 7 is_stmt 0 view .LVU210
+ 658 0024 FFF7FEFF 		bl	HAL_UART_Init
+ 659              	.LVL19:
+ 263:../../CM4/Core/Src/nuovo.c ****   {
+ 660              		.loc 1 263 6 discriminator 1 view .LVU211
+ 661 0028 70B9     		cbnz	r0, .L39
+ 267:../../CM4/Core/Src/nuovo.c ****   {
+ 662              		.loc 1 267 3 is_stmt 1 view .LVU212
+ 267:../../CM4/Core/Src/nuovo.c ****   {
+ 663              		.loc 1 267 7 is_stmt 0 view .LVU213
+ 664 002a 0021     		movs	r1, #0
+ 665 002c 0A48     		ldr	r0, .L43
+ 666 002e FFF7FEFF 		bl	HAL_UARTEx_SetTxFifoThreshold
+ 667              	.LVL20:
+ 267:../../CM4/Core/Src/nuovo.c ****   {
+ 668              		.loc 1 267 6 discriminator 1 view .LVU214
+ 669 0032 58B9     		cbnz	r0, .L40
+ 271:../../CM4/Core/Src/nuovo.c ****   {
+ 670              		.loc 1 271 3 is_stmt 1 view .LVU215
+ 271:../../CM4/Core/Src/nuovo.c ****   {
+ 671              		.loc 1 271 7 is_stmt 0 view .LVU216
+ 672 0034 0021     		movs	r1, #0
+ 673 0036 0848     		ldr	r0, .L43
+ 674 0038 FFF7FEFF 		bl	HAL_UARTEx_SetRxFifoThreshold
+ 675              	.LVL21:
+ 271:../../CM4/Core/Src/nuovo.c ****   {
+ 676              		.loc 1 271 6 discriminator 1 view .LVU217
+ 677 003c 40B9     		cbnz	r0, .L41
+ 275:../../CM4/Core/Src/nuovo.c ****   {
+ 678              		.loc 1 275 3 is_stmt 1 view .LVU218
+ 275:../../CM4/Core/Src/nuovo.c ****   {
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 26
+
+
+ 679              		.loc 1 275 7 is_stmt 0 view .LVU219
+ 680 003e 0648     		ldr	r0, .L43
+ 681 0040 FFF7FEFF 		bl	HAL_UARTEx_DisableFifoMode
+ 682              	.LVL22:
+ 275:../../CM4/Core/Src/nuovo.c ****   {
+ 683              		.loc 1 275 6 discriminator 1 view .LVU220
+ 684 0044 30B9     		cbnz	r0, .L42
+ 283:../../CM4/Core/Src/nuovo.c **** 
+ 685              		.loc 1 283 1 view .LVU221
+ 686 0046 08BD     		pop	{r3, pc}
+ 687              	.L39:
+ 265:../../CM4/Core/Src/nuovo.c ****   }
+ 688              		.loc 1 265 5 is_stmt 1 view .LVU222
+ 689 0048 FFF7FEFF 		bl	Error_Handler
+ 690              	.LVL23:
+ 691              	.L40:
+ 269:../../CM4/Core/Src/nuovo.c ****   }
+ 692              		.loc 1 269 5 view .LVU223
+ 693 004c FFF7FEFF 		bl	Error_Handler
+ 694              	.LVL24:
+ 695              	.L41:
+ 273:../../CM4/Core/Src/nuovo.c ****   }
+ 696              		.loc 1 273 5 view .LVU224
+ 697 0050 FFF7FEFF 		bl	Error_Handler
+ 698              	.LVL25:
+ 699              	.L42:
+ 277:../../CM4/Core/Src/nuovo.c ****   }
+ 700              		.loc 1 277 5 view .LVU225
+ 701 0054 FFF7FEFF 		bl	Error_Handler
+ 702              	.LVL26:
+ 703              	.L44:
+ 704              		.align	2
+ 705              	.L43:
+ 706 0058 00000000 		.word	huart4
+ 707 005c 004C0040 		.word	1073761280
+ 708              		.cfi_endproc
+ 709              	.LFE136:
+ 711              		.section	.rodata.main.str1.4,"aMS",%progbits,1
+ 712              		.align	2
+ 713              	.LC0:
+ 714 0000 4C454420 		.ascii	"LED ACCESO %lu\012\000"
+ 714      41434345 
+ 714      534F2025 
+ 714      6C750A00 
+ 715              		.section	.text.main,"ax",%progbits
+ 716              		.align	1
+ 717              		.global	main
+ 718              		.syntax unified
+ 719              		.thumb
+ 720              		.thumb_func
+ 722              	main:
+ 723              	.LFB135:
+  43:../../CM4/Core/Src/nuovo.c ****     /* ------------------------------------------------------------------ */
+ 724              		.loc 1 43 1 view -0
+ 725              		.cfi_startproc
+ 726              		@ args = 0, pretend = 0, frame = 16
+ 727              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 27
+
+
+ 728 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 729              	.LCFI13:
+ 730              		.cfi_def_cfa_offset 20
+ 731              		.cfi_offset 4, -20
+ 732              		.cfi_offset 5, -16
+ 733              		.cfi_offset 6, -12
+ 734              		.cfi_offset 7, -8
+ 735              		.cfi_offset 14, -4
+ 736 0002 85B0     		sub	sp, sp, #20
+ 737              	.LCFI14:
+ 738              		.cfi_def_cfa_offset 40
+  47:../../CM4/Core/Src/nuovo.c ****     BUSY(10000);
+ 739              		.loc 1 47 5 view .LVU227
+  47:../../CM4/Core/Src/nuovo.c ****     BUSY(10000);
+ 740              		.loc 1 47 8 is_stmt 0 view .LVU228
+ 741 0004 B34A     		ldr	r2, .L104
+ 742 0006 D2F8E030 		ldr	r3, [r2, #224]
+  47:../../CM4/Core/Src/nuovo.c ****     BUSY(10000);
+ 743              		.loc 1 47 18 view .LVU229
+ 744 000a 43F00203 		orr	r3, r3, #2
+ 745 000e C2F8E030 		str	r3, [r2, #224]
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 746              		.loc 1 48 5 is_stmt 1 view .LVU230
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 747              		.loc 1 48 5 view .LVU231
+ 748              	.LBB16:
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 749              		.loc 1 48 5 view .LVU232
+ 750 0012 0023     		movs	r3, #0
+ 751 0014 0193     		str	r3, [sp, #4]
+ 752 0016 02E0     		b	.L46
+ 753              	.L47:
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 754              		.loc 1 48 5 discriminator 3 view .LVU233
+ 755 0018 019B     		ldr	r3, [sp, #4]
+ 756 001a 0133     		adds	r3, r3, #1
+ 757 001c 0193     		str	r3, [sp, #4]
+ 758              	.L46:
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 759              		.loc 1 48 5 discriminator 1 view .LVU234
+ 760 001e 019A     		ldr	r2, [sp, #4]
+ 761 0020 42F20F73 		movw	r3, #9999
+ 762 0024 9A42     		cmp	r2, r3
+ 763 0026 F7DD     		ble	.L47
+ 764              	.LBE16:
+  48:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 0);   GPIOB->MODER |= (1U << 0);   /* PB0  out */
+ 765              		.loc 1 48 5 view .LVU235
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 766              		.loc 1 49 5 view .LVU236
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 767              		.loc 1 49 10 is_stmt 0 view .LVU237
+ 768 0028 AB4B     		ldr	r3, .L104+4
+ 769 002a 1A68     		ldr	r2, [r3]
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 770              		.loc 1 49 18 view .LVU238
+ 771 002c 22F00302 		bic	r2, r2, #3
+ 772 0030 1A60     		str	r2, [r3]
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 28
+
+
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 773              		.loc 1 49 35 is_stmt 1 view .LVU239
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 774              		.loc 1 49 40 is_stmt 0 view .LVU240
+ 775 0032 1A68     		ldr	r2, [r3]
+  49:../../CM4/Core/Src/nuovo.c ****     GPIOB->MODER &= ~(3U << 28);  GPIOB->MODER |= (1U << 28);  /* PB14 out */
+ 776              		.loc 1 49 48 view .LVU241
+ 777 0034 42F00102 		orr	r2, r2, #1
+ 778 0038 1A60     		str	r2, [r3]
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 779              		.loc 1 50 5 is_stmt 1 view .LVU242
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 780              		.loc 1 50 10 is_stmt 0 view .LVU243
+ 781 003a 1A68     		ldr	r2, [r3]
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 782              		.loc 1 50 18 view .LVU244
+ 783 003c 22F04052 		bic	r2, r2, #805306368
+ 784 0040 1A60     		str	r2, [r3]
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 785              		.loc 1 50 35 is_stmt 1 view .LVU245
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 786              		.loc 1 50 40 is_stmt 0 view .LVU246
+ 787 0042 1A68     		ldr	r2, [r3]
+  50:../../CM4/Core/Src/nuovo.c **** 
+ 788              		.loc 1 50 48 view .LVU247
+ 789 0044 42F08052 		orr	r2, r2, #268435456
+ 790 0048 1A60     		str	r2, [r3]
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 791              		.loc 1 53 5 is_stmt 1 view .LVU248
+ 792              	.LBB17:
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 793              		.loc 1 53 10 view .LVU249
+ 794              	.LVL27:
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 795              		.loc 1 53 14 is_stmt 0 view .LVU250
+ 796 004a 0021     		movs	r1, #0
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 797              		.loc 1 53 5 view .LVU251
+ 798 004c 18E0     		b	.L48
+ 799              	.LVL28:
+ 800              	.L50:
+ 801              	.LBB18:
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 802              		.loc 1 55 9 is_stmt 1 discriminator 3 view .LVU252
+ 803 004e 029B     		ldr	r3, [sp, #8]
+ 804 0050 0133     		adds	r3, r3, #1
+ 805 0052 0293     		str	r3, [sp, #8]
+ 806              	.L49:
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 807              		.loc 1 55 9 discriminator 1 view .LVU253
+ 808 0054 029A     		ldr	r2, [sp, #8]
+ 809 0056 A14B     		ldr	r3, .L104+8
+ 810 0058 9A42     		cmp	r2, r3
+ 811 005a F8DD     		ble	.L50
+ 812              	.LBE18:
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 813              		.loc 1 55 9 view .LVU254
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 29
+
+
+  56:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 814              		.loc 1 56 9 view .LVU255
+  56:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 815              		.loc 1 56 9 view .LVU256
+ 816 005c 9E4B     		ldr	r3, .L104+4
+ 817 005e 4FF48032 		mov	r2, #65536
+ 818 0062 9A61     		str	r2, [r3, #24]
+  56:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 819              		.loc 1 56 9 view .LVU257
+ 820 0064 4FF08042 		mov	r2, #1073741824
+ 821 0068 9A61     		str	r2, [r3, #24]
+  56:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 822              		.loc 1 56 9 view .LVU258
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 823              		.loc 1 57 9 view .LVU259
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 824              		.loc 1 57 9 view .LVU260
+ 825              	.LBB19:
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 826              		.loc 1 57 9 view .LVU261
+ 827 006a 0023     		movs	r3, #0
+ 828 006c 0393     		str	r3, [sp, #12]
+ 829 006e 02E0     		b	.L51
+ 830              	.L52:
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 831              		.loc 1 57 9 discriminator 3 view .LVU262
+ 832 0070 039B     		ldr	r3, [sp, #12]
+ 833 0072 0133     		adds	r3, r3, #1
+ 834 0074 0393     		str	r3, [sp, #12]
+ 835              	.L51:
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 836              		.loc 1 57 9 discriminator 1 view .LVU263
+ 837 0076 039A     		ldr	r2, [sp, #12]
+ 838 0078 984B     		ldr	r3, .L104+8
+ 839 007a 9A42     		cmp	r2, r3
+ 840 007c F8DD     		ble	.L52
+ 841              	.LBE19:
+  57:../../CM4/Core/Src/nuovo.c ****     }
+ 842              		.loc 1 57 9 view .LVU264
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 843              		.loc 1 53 29 discriminator 2 view .LVU265
+ 844 007e 0131     		adds	r1, r1, #1
+ 845              	.LVL29:
+ 846              	.L48:
+  53:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); LED_RED_ON();
+ 847              		.loc 1 53 23 discriminator 1 view .LVU266
+ 848 0080 0129     		cmp	r1, #1
+ 849 0082 08DC     		bgt	.L98
+  54:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 850              		.loc 1 54 9 view .LVU267
+ 851 0084 944B     		ldr	r3, .L104+4
+ 852 0086 0122     		movs	r2, #1
+ 853 0088 9A61     		str	r2, [r3, #24]
+  54:../../CM4/Core/Src/nuovo.c ****         BUSY(3000000);
+ 854              		.loc 1 54 25 view .LVU268
+ 855 008a 4FF48042 		mov	r2, #16384
+ 856 008e 9A61     		str	r2, [r3, #24]
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 30
+
+
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 857              		.loc 1 55 9 view .LVU269
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 858              		.loc 1 55 9 view .LVU270
+ 859              	.LBB20:
+  55:../../CM4/Core/Src/nuovo.c ****         LED_ALL_OFF();
+ 860              		.loc 1 55 9 view .LVU271
+ 861 0090 0023     		movs	r3, #0
+ 862 0092 0293     		str	r3, [sp, #8]
+ 863 0094 DEE7     		b	.L49
+ 864              	.L98:
+ 865              	.LBE20:
+ 866              	.LBE17:
+  60:../../CM4/Core/Src/nuovo.c ****     SystemClock_Config();
+ 867              		.loc 1 60 5 view .LVU272
+ 868 0096 FFF7FEFF 		bl	HAL_Init
+ 869              	.LVL30:
+  61:../../CM4/Core/Src/nuovo.c ****     SCB->VTOR = 0x08100000;
+ 870              		.loc 1 61 5 view .LVU273
+ 871 009a FFF7FEFF 		bl	SystemClock_Config
+ 872              	.LVL31:
+  62:../../CM4/Core/Src/nuovo.c ****     MX_GPIO_Init();
+ 873              		.loc 1 62 5 view .LVU274
+  62:../../CM4/Core/Src/nuovo.c ****     MX_GPIO_Init();
+ 874              		.loc 1 62 15 is_stmt 0 view .LVU275
+ 875 009e 904B     		ldr	r3, .L104+12
+ 876 00a0 4FF00162 		mov	r2, #135266304
+ 877 00a4 9A60     		str	r2, [r3, #8]
+  63:../../CM4/Core/Src/nuovo.c ****     MX_TIM2_Init();
+ 878              		.loc 1 63 5 is_stmt 1 view .LVU276
+ 879 00a6 FFF7FEFF 		bl	MX_GPIO_Init
+ 880              	.LVL32:
+  64:../../CM4/Core/Src/nuovo.c ****     MX_UART4_Init();
+ 881              		.loc 1 64 5 view .LVU277
+ 882 00aa FFF7FEFF 		bl	MX_TIM2_Init
+ 883              	.LVL33:
+  65:../../CM4/Core/Src/nuovo.c **** 
+ 884              		.loc 1 65 5 view .LVU278
+ 885 00ae FFF7FEFF 		bl	MX_UART4_Init
+ 886              	.LVL34:
+  68:../../CM4/Core/Src/nuovo.c ****     uint32_t apb1pre = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk)
+ 887              		.loc 1 68 5 view .LVU279
+  68:../../CM4/Core/Src/nuovo.c ****     uint32_t apb1pre = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk)
+ 888              		.loc 1 68 24 is_stmt 0 view .LVU280
+ 889 00b2 FFF7FEFF 		bl	HAL_RCC_GetPCLK1Freq
+ 890              	.LVL35:
+ 891 00b6 0246     		mov	r2, r0
+ 892              	.LVL36:
+  69:../../CM4/Core/Src/nuovo.c ****                         >> RCC_D2CFGR_D2PPRE1_Pos;
+ 893              		.loc 1 69 5 is_stmt 1 view .LVU281
+  69:../../CM4/Core/Src/nuovo.c ****                         >> RCC_D2CFGR_D2PPRE1_Pos;
+ 894              		.loc 1 69 28 is_stmt 0 view .LVU282
+ 895 00b8 864B     		ldr	r3, .L104
+ 896 00ba DB69     		ldr	r3, [r3, #28]
+ 897              	.LVL37:
+  71:../../CM4/Core/Src/nuovo.c ****     uint32_t psc     = (tim2clk / TIMER_TARGET_HZ);
+ 898              		.loc 1 71 5 is_stmt 1 view .LVU283
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 31
+
+
+  71:../../CM4/Core/Src/nuovo.c ****     uint32_t psc     = (tim2clk / TIMER_TARGET_HZ);
+ 899              		.loc 1 71 58 is_stmt 0 view .LVU284
+ 900 00bc 13F0400F 		tst	r3, #64
+ 901 00c0 00D0     		beq	.L54
+  71:../../CM4/Core/Src/nuovo.c ****     uint32_t psc     = (tim2clk / TIMER_TARGET_HZ);
+ 902              		.loc 1 71 58 discriminator 1 view .LVU285
+ 903 00c2 4200     		lsls	r2, r0, #1
+ 904              	.L54:
+ 905              	.LVL38:
+  72:../../CM4/Core/Src/nuovo.c ****     if (psc > 0U) { psc -= 1U; }
+ 906              		.loc 1 72 5 is_stmt 1 view .LVU286
+  72:../../CM4/Core/Src/nuovo.c ****     if (psc > 0U) { psc -= 1U; }
+ 907              		.loc 1 72 14 is_stmt 0 view .LVU287
+ 908 00c4 874B     		ldr	r3, .L104+16
+ 909              	.LVL39:
+  72:../../CM4/Core/Src/nuovo.c ****     if (psc > 0U) { psc -= 1U; }
+ 910              		.loc 1 72 14 view .LVU288
+ 911 00c6 A3FB0213 		umull	r1, r3, r3, r2
+ 912 00ca 9B0C     		lsrs	r3, r3, #18
+ 913              	.LVL40:
+  73:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_PRESCALER(&htim2, psc);
+ 914              		.loc 1 73 5 is_stmt 1 view .LVU289
+  73:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_PRESCALER(&htim2, psc);
+ 915              		.loc 1 73 8 is_stmt 0 view .LVU290
+ 916 00cc 8649     		ldr	r1, .L104+20
+ 917 00ce 8A42     		cmp	r2, r1
+ 918 00d0 00D9     		bls	.L55
+  73:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_PRESCALER(&htim2, psc);
+ 919              		.loc 1 73 21 is_stmt 1 discriminator 1 view .LVU291
+  73:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_PRESCALER(&htim2, psc);
+ 920              		.loc 1 73 25 is_stmt 0 discriminator 1 view .LVU292
+ 921 00d2 013B     		subs	r3, r3, #1
+ 922              	.LVL41:
+ 923              	.L55:
+  74:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 924              		.loc 1 74 5 is_stmt 1 view .LVU293
+ 925 00d4 854D     		ldr	r5, .L104+24
+ 926 00d6 2A68     		ldr	r2, [r5]
+ 927              	.LVL42:
+  74:../../CM4/Core/Src/nuovo.c ****     __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 928              		.loc 1 74 5 is_stmt 0 view .LVU294
+ 929 00d8 9362     		str	r3, [r2, #40]
+  75:../../CM4/Core/Src/nuovo.c ****     HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_UPDATE);
+ 930              		.loc 1 75 5 is_stmt 1 view .LVU295
+ 931 00da 0024     		movs	r4, #0
+ 932 00dc 5462     		str	r4, [r2, #36]
+  76:../../CM4/Core/Src/nuovo.c ****     HAL_TIM_Base_Start(&htim2);
+ 933              		.loc 1 76 5 view .LVU296
+ 934 00de 0121     		movs	r1, #1
+ 935 00e0 2846     		mov	r0, r5
+ 936              	.LVL43:
+  76:../../CM4/Core/Src/nuovo.c ****     HAL_TIM_Base_Start(&htim2);
+ 937              		.loc 1 76 5 is_stmt 0 view .LVU297
+ 938 00e2 FFF7FEFF 		bl	HAL_TIM_GenerateEvent
+ 939              	.LVL44:
+  77:../../CM4/Core/Src/nuovo.c **** 
+ 940              		.loc 1 77 5 is_stmt 1 view .LVU298
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 32
+
+
+ 941 00e6 2846     		mov	r0, r5
+ 942 00e8 FFF7FEFF 		bl	HAL_TIM_Base_Start
+ 943              	.LVL45:
+  80:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+ 944              		.loc 1 80 5 view .LVU299
+ 945              	.LBB21:
+  80:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+ 946              		.loc 1 80 10 view .LVU300
+  80:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+ 947              		.loc 1 80 5 is_stmt 0 view .LVU301
+ 948 00ec 0CE0     		b	.L56
+ 949              	.LVL46:
+ 950              	.L57:
+  81:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_OFF(); HAL_Delay(200U);
+ 951              		.loc 1 81 9 is_stmt 1 view .LVU302
+ 952 00ee 7A4D     		ldr	r5, .L104+4
+ 953 00f0 0123     		movs	r3, #1
+ 954 00f2 AB61     		str	r3, [r5, #24]
+  81:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_OFF(); HAL_Delay(200U);
+ 955              		.loc 1 81 25 view .LVU303
+ 956 00f4 C820     		movs	r0, #200
+ 957 00f6 FFF7FEFF 		bl	HAL_Delay
+ 958              	.LVL47:
+  82:../../CM4/Core/Src/nuovo.c ****     }
+ 959              		.loc 1 82 9 view .LVU304
+ 960 00fa 4FF48033 		mov	r3, #65536
+ 961 00fe AB61     		str	r3, [r5, #24]
+  82:../../CM4/Core/Src/nuovo.c ****     }
+ 962              		.loc 1 82 26 view .LVU305
+ 963 0100 C820     		movs	r0, #200
+ 964 0102 FFF7FEFF 		bl	HAL_Delay
+ 965              	.LVL48:
+  80:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+ 966              		.loc 1 80 29 discriminator 3 view .LVU306
+ 967 0106 0134     		adds	r4, r4, #1
+ 968              	.LVL49:
+ 969              	.L56:
+  80:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON(); HAL_Delay(200U);
+ 970              		.loc 1 80 23 discriminator 1 view .LVU307
+ 971 0108 012C     		cmp	r4, #1
+ 972 010a F0DD     		ble	.L57
+ 973              	.LBE21:
+  84:../../CM4/Core/Src/nuovo.c **** 
+ 974              		.loc 1 84 5 view .LVU308
+ 975 010c 4FF4FA70 		mov	r0, #500
+ 976 0110 FFF7FEFF 		bl	HAL_Delay
+ 977              	.LVL50:
+  94:../../CM4/Core/Src/nuovo.c **** 
+ 978              		.loc 1 94 5 view .LVU309
+ 979 0114 704C     		ldr	r4, .L104+4
+ 980              	.LVL51:
+  94:../../CM4/Core/Src/nuovo.c **** 
+ 981              		.loc 1 94 5 is_stmt 0 view .LVU310
+ 982 0116 4FF48043 		mov	r3, #16384
+ 983 011a A361     		str	r3, [r4, #24]
+  94:../../CM4/Core/Src/nuovo.c **** 
+ 984              		.loc 1 94 19 is_stmt 1 view .LVU311
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 33
+
+
+ 985 011c 4FF47A70 		mov	r0, #1000
+ 986 0120 FFF7FEFF 		bl	HAL_Delay
+ 987              	.LVL52:
+  94:../../CM4/Core/Src/nuovo.c **** 
+ 988              		.loc 1 94 37 discriminator 1 view .LVU312
+ 989 0124 4FF08043 		mov	r3, #1073741824
+ 990 0128 A361     		str	r3, [r4, #24]
+  94:../../CM4/Core/Src/nuovo.c **** 
+ 991              		.loc 1 94 52 discriminator 1 view .LVU313
+ 992 012a 4FF4FA70 		mov	r0, #500
+ 993 012e FFF7FEFF 		bl	HAL_Delay
+ 994              	.LVL53:
+  96:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase1_start < 5000U) {
+ 995              		.loc 1 96 5 view .LVU314
+  96:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase1_start < 5000U) {
+ 996              		.loc 1 96 29 is_stmt 0 view .LVU315
+ 997 0132 FFF7FEFF 		bl	HAL_GetTick
+ 998              	.LVL54:
+ 999 0136 0446     		mov	r4, r0
+ 1000              	.LVL55:
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1001              		.loc 1 97 5 is_stmt 1 view .LVU316
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1002              		.loc 1 97 11 is_stmt 0 view .LVU317
+ 1003 0138 18E0     		b	.L58
+ 1004              	.LVL56:
+ 1005              	.L59:
+  98:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_ON();
+ 1006              		.loc 1 98 9 is_stmt 1 view .LVU318
+ 1007 013a 6D4E     		ldr	r6, .L104+28
+ 1008 013c 0122     		movs	r2, #1
+ 1009 013e 0221     		movs	r1, #2
+ 1010 0140 3046     		mov	r0, r6
+ 1011 0142 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1012              	.LVL57:
+  99:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(500U);
+ 1013              		.loc 1 99 9 view .LVU319
+ 1014 0146 644D     		ldr	r5, .L104+4
+ 1015 0148 0123     		movs	r3, #1
+ 1016 014a AB61     		str	r3, [r5, #24]
+ 100:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1017              		.loc 1 100 9 view .LVU320
+ 1018 014c 4FF4FA70 		mov	r0, #500
+ 1019 0150 FFF7FEFF 		bl	HAL_Delay
+ 1020              	.LVL58:
+ 101:../../CM4/Core/Src/nuovo.c ****         LED_GREEN_OFF();
+ 1021              		.loc 1 101 9 view .LVU321
+ 1022 0154 0022     		movs	r2, #0
+ 1023 0156 0221     		movs	r1, #2
+ 1024 0158 3046     		mov	r0, r6
+ 1025 015a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1026              	.LVL59:
+ 102:../../CM4/Core/Src/nuovo.c ****         HAL_Delay(500U);
+ 1027              		.loc 1 102 9 view .LVU322
+ 1028 015e 4FF48033 		mov	r3, #65536
+ 1029 0162 AB61     		str	r3, [r5, #24]
+ 103:../../CM4/Core/Src/nuovo.c ****     }
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 34
+
+
+ 1030              		.loc 1 103 9 view .LVU323
+ 1031 0164 4FF4FA70 		mov	r0, #500
+ 1032 0168 FFF7FEFF 		bl	HAL_Delay
+ 1033              	.LVL60:
+ 1034              	.L58:
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1035              		.loc 1 97 41 view .LVU324
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1036              		.loc 1 97 12 is_stmt 0 view .LVU325
+ 1037 016c FFF7FEFF 		bl	HAL_GetTick
+ 1038              	.LVL61:
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1039              		.loc 1 97 26 discriminator 1 view .LVU326
+ 1040 0170 031B     		subs	r3, r0, r4
+  97:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1041              		.loc 1 97 41 discriminator 1 view .LVU327
+ 1042 0172 41F28732 		movw	r2, #4999
+ 1043 0176 9342     		cmp	r3, r2
+ 1044 0178 DFD9     		bls	.L59
+ 105:../../CM4/Core/Src/nuovo.c **** 
+ 1045              		.loc 1 105 5 is_stmt 1 view .LVU328
+ 1046 017a 4FF47A70 		mov	r0, #1000
+ 1047 017e FFF7FEFF 		bl	HAL_Delay
+ 1048              	.LVL62:
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1049              		.loc 1 115 5 view .LVU329
+ 1050              	.LBB22:
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1051              		.loc 1 115 10 view .LVU330
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1052              		.loc 1 115 14 is_stmt 0 view .LVU331
+ 1053 0182 0024     		movs	r4, #0
+ 1054              	.LVL63:
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1055              		.loc 1 115 5 view .LVU332
+ 1056 0184 0FE0     		b	.L60
+ 1057              	.LVL64:
+ 1058              	.L61:
+ 116:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 1059              		.loc 1 116 9 is_stmt 1 view .LVU333
+ 1060 0186 544D     		ldr	r5, .L104+4
+ 1061 0188 4FF48043 		mov	r3, #16384
+ 1062 018c AB61     		str	r3, [r5, #24]
+ 116:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 1063              		.loc 1 116 23 view .LVU334
+ 1064 018e 4FF4FA70 		mov	r0, #500
+ 1065 0192 FFF7FEFF 		bl	HAL_Delay
+ 1066              	.LVL65:
+ 117:../../CM4/Core/Src/nuovo.c ****     }
+ 1067              		.loc 1 117 9 view .LVU335
+ 1068 0196 4FF08043 		mov	r3, #1073741824
+ 1069 019a AB61     		str	r3, [r5, #24]
+ 117:../../CM4/Core/Src/nuovo.c ****     }
+ 1070              		.loc 1 117 24 view .LVU336
+ 1071 019c 4FF4FA70 		mov	r0, #500
+ 1072 01a0 FFF7FEFF 		bl	HAL_Delay
+ 1073              	.LVL66:
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 35
+
+
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1074              		.loc 1 115 29 discriminator 3 view .LVU337
+ 1075 01a4 0134     		adds	r4, r4, #1
+ 1076              	.LVL67:
+ 1077              	.L60:
+ 115:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1078              		.loc 1 115 23 discriminator 1 view .LVU338
+ 1079 01a6 012C     		cmp	r4, #1
+ 1080 01a8 EDDD     		ble	.L61
+ 1081              	.LBE22:
+ 119:../../CM4/Core/Src/nuovo.c **** 
+ 1082              		.loc 1 119 5 view .LVU339
+ 1083 01aa 4FF4FA70 		mov	r0, #500
+ 1084 01ae FFF7FEFF 		bl	HAL_Delay
+ 1085              	.LVL68:
+ 121:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase2_start < 5000U) {
+ 1086              		.loc 1 121 5 view .LVU340
+ 121:../../CM4/Core/Src/nuovo.c ****     while (HAL_GetTick() - phase2_start < 5000U) {
+ 1087              		.loc 1 121 29 is_stmt 0 view .LVU341
+ 1088 01b2 FFF7FEFF 		bl	HAL_GetTick
+ 1089              	.LVL69:
+ 1090 01b6 0446     		mov	r4, r0
+ 1091              	.LVL70:
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1092              		.loc 1 122 5 is_stmt 1 view .LVU342
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1093              		.loc 1 122 11 is_stmt 0 view .LVU343
+ 1094 01b8 08E0     		b	.L62
+ 1095              	.LVL71:
+ 1096              	.L100:
+ 124:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1097              		.loc 1 124 13 is_stmt 1 view .LVU344
+ 1098 01ba 474B     		ldr	r3, .L104+4
+ 1099 01bc 0122     		movs	r2, #1
+ 1100 01be 9A61     		str	r2, [r3, #24]
+ 124:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1101              		.loc 1 124 29 view .LVU345
+ 1102 01c0 4FF08042 		mov	r2, #1073741824
+ 1103 01c4 9A61     		str	r2, [r3, #24]
+ 1104              	.L64:
+ 128:../../CM4/Core/Src/nuovo.c ****     }
+ 1105              		.loc 1 128 9 view .LVU346
+ 1106 01c6 3220     		movs	r0, #50
+ 1107 01c8 FFF7FEFF 		bl	HAL_Delay
+ 1108              	.LVL72:
+ 1109              	.L62:
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1110              		.loc 1 122 41 view .LVU347
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1111              		.loc 1 122 12 is_stmt 0 view .LVU348
+ 1112 01cc FFF7FEFF 		bl	HAL_GetTick
+ 1113              	.LVL73:
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1114              		.loc 1 122 26 discriminator 1 view .LVU349
+ 1115 01d0 031B     		subs	r3, r0, r4
+ 122:../../CM4/Core/Src/nuovo.c ****         if (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1116              		.loc 1 122 41 discriminator 1 view .LVU350
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 36
+
+
+ 1117 01d2 41F28732 		movw	r2, #4999
+ 1118 01d6 9342     		cmp	r3, r2
+ 1119 01d8 0DD8     		bhi	.L99
+ 123:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); LED_RED_OFF();
+ 1120              		.loc 1 123 9 is_stmt 1 view .LVU351
+ 123:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); LED_RED_OFF();
+ 1121              		.loc 1 123 13 is_stmt 0 view .LVU352
+ 1122 01da 0121     		movs	r1, #1
+ 1123 01dc 4448     		ldr	r0, .L104+28
+ 1124 01de FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1125              	.LVL74:
+ 123:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); LED_RED_OFF();
+ 1126              		.loc 1 123 12 discriminator 1 view .LVU353
+ 1127 01e2 0128     		cmp	r0, #1
+ 1128 01e4 E9D0     		beq	.L100
+ 126:../../CM4/Core/Src/nuovo.c ****         }
+ 1129              		.loc 1 126 13 is_stmt 1 view .LVU354
+ 1130 01e6 3C4B     		ldr	r3, .L104+4
+ 1131 01e8 4FF48032 		mov	r2, #65536
+ 1132 01ec 9A61     		str	r2, [r3, #24]
+ 126:../../CM4/Core/Src/nuovo.c ****         }
+ 1133              		.loc 1 126 30 view .LVU355
+ 1134 01ee 4FF48042 		mov	r2, #16384
+ 1135 01f2 9A61     		str	r2, [r3, #24]
+ 1136 01f4 E7E7     		b	.L64
+ 1137              	.L99:
+ 130:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(5000U);
+ 1138              		.loc 1 130 5 view .LVU356
+ 130:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(5000U);
+ 1139              		.loc 1 130 5 view .LVU357
+ 1140 01f6 384B     		ldr	r3, .L104+4
+ 1141 01f8 4FF48032 		mov	r2, #65536
+ 1142 01fc 9A61     		str	r2, [r3, #24]
+ 130:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(5000U);
+ 1143              		.loc 1 130 5 view .LVU358
+ 1144 01fe 4FF08042 		mov	r2, #1073741824
+ 1145 0202 9A61     		str	r2, [r3, #24]
+ 130:../../CM4/Core/Src/nuovo.c ****     HAL_Delay(5000U);
+ 1146              		.loc 1 130 5 view .LVU359
+ 131:../../CM4/Core/Src/nuovo.c **** 
+ 1147              		.loc 1 131 5 view .LVU360
+ 1148 0204 41F28830 		movw	r0, #5000
+ 1149 0208 FFF7FEFF 		bl	HAL_Delay
+ 1150              	.LVL75:
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1151              		.loc 1 141 5 view .LVU361
+ 1152              	.LBB23:
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1153              		.loc 1 141 10 view .LVU362
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1154              		.loc 1 141 14 is_stmt 0 view .LVU363
+ 1155 020c 0024     		movs	r4, #0
+ 1156              	.LVL76:
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1157              		.loc 1 141 5 view .LVU364
+ 1158 020e 0FE0     		b	.L66
+ 1159              	.LVL77:
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 37
+
+
+ 1160              	.L67:
+ 142:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 1161              		.loc 1 142 9 is_stmt 1 view .LVU365
+ 1162 0210 314D     		ldr	r5, .L104+4
+ 1163 0212 4FF48043 		mov	r3, #16384
+ 1164 0216 AB61     		str	r3, [r5, #24]
+ 142:../../CM4/Core/Src/nuovo.c ****         LED_RED_OFF(); HAL_Delay(500U);
+ 1165              		.loc 1 142 23 view .LVU366
+ 1166 0218 4FF4FA70 		mov	r0, #500
+ 1167 021c FFF7FEFF 		bl	HAL_Delay
+ 1168              	.LVL78:
+ 143:../../CM4/Core/Src/nuovo.c ****     }
+ 1169              		.loc 1 143 9 view .LVU367
+ 1170 0220 4FF08043 		mov	r3, #1073741824
+ 1171 0224 AB61     		str	r3, [r5, #24]
+ 143:../../CM4/Core/Src/nuovo.c ****     }
+ 1172              		.loc 1 143 24 view .LVU368
+ 1173 0226 4FF4FA70 		mov	r0, #500
+ 1174 022a FFF7FEFF 		bl	HAL_Delay
+ 1175              	.LVL79:
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1176              		.loc 1 141 29 discriminator 3 view .LVU369
+ 1177 022e 0134     		adds	r4, r4, #1
+ 1178              	.LVL80:
+ 1179              	.L66:
+ 141:../../CM4/Core/Src/nuovo.c ****         LED_RED_ON(); HAL_Delay(500U);
+ 1180              		.loc 1 141 23 discriminator 1 view .LVU370
+ 1181 0230 022C     		cmp	r4, #2
+ 1182 0232 EDDD     		ble	.L67
+ 1183              	.LBE23:
+ 145:../../CM4/Core/Src/nuovo.c **** 
+ 1184              		.loc 1 145 5 view .LVU371
+ 1185 0234 4FF4FA70 		mov	r0, #500
+ 1186 0238 FFF7FEFF 		bl	HAL_Delay
+ 1187              	.LVL81:
+ 147:../../CM4/Core/Src/nuovo.c ****     uint32_t echo_time = 0U;
+ 1188              		.loc 1 147 5 view .LVU372
+ 148:../../CM4/Core/Src/nuovo.c **** 
+ 1189              		.loc 1 148 5 view .LVU373
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1190              		.loc 1 150 5 view .LVU374
+ 1191              	.LBB24:
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1192              		.loc 1 150 10 view .LVU375
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1193              		.loc 1 150 14 is_stmt 0 view .LVU376
+ 1194 023c 0024     		movs	r4, #0
+ 1195              	.LVL82:
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1196              		.loc 1 150 14 view .LVU377
+ 1197              	.LBE24:
+ 148:../../CM4/Core/Src/nuovo.c **** 
+ 1198              		.loc 1 148 14 view .LVU378
+ 1199 023e 2646     		mov	r6, r4
+ 147:../../CM4/Core/Src/nuovo.c ****     uint32_t echo_time = 0U;
+ 1200              		.loc 1 147 13 view .LVU379
+ 1201 0240 2546     		mov	r5, r4
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 38
+
+
+ 1202              	.LBB29:
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1203              		.loc 1 150 5 view .LVU380
+ 1204 0242 15E0     		b	.L68
+ 1205              	.LVL83:
+ 1206              	.L72:
+ 1207              	.LBB25:
+ 169:../../CM4/Core/Src/nuovo.c ****             uint32_t echo_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 1208              		.loc 1 169 9 is_stmt 1 view .LVU381
+ 169:../../CM4/Core/Src/nuovo.c ****             uint32_t echo_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 1209              		.loc 1 169 13 is_stmt 0 view .LVU382
+ 1210 0244 0121     		movs	r1, #1
+ 1211 0246 2A48     		ldr	r0, .L104+28
+ 1212 0248 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1213              	.LVL84:
+ 1214 024c 0746     		mov	r7, r0
+ 1215              	.LVL85:
+ 169:../../CM4/Core/Src/nuovo.c ****             uint32_t echo_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 1216              		.loc 1 169 12 discriminator 1 view .LVU383
+ 1217 024e 0128     		cmp	r0, #1
+ 1218 0250 50D0     		beq	.L74
+ 180:../../CM4/Core/Src/nuovo.c ****             /* GREEN blink = echo received this attempt */
+ 1219              		.loc 1 180 9 is_stmt 1 view .LVU384
+ 185:../../CM4/Core/Src/nuovo.c ****         }
+ 1220              		.loc 1 185 13 view .LVU385
+ 1221 0252 214F     		ldr	r7, .L104+4
+ 1222 0254 4FF48043 		mov	r3, #16384
+ 1223 0258 BB61     		str	r3, [r7, #24]
+ 185:../../CM4/Core/Src/nuovo.c ****         }
+ 1224              		.loc 1 185 27 view .LVU386
+ 1225 025a 4FF49670 		mov	r0, #300
+ 1226 025e FFF7FEFF 		bl	HAL_Delay
+ 1227              	.LVL86:
+ 185:../../CM4/Core/Src/nuovo.c ****         }
+ 1228              		.loc 1 185 44 discriminator 1 view .LVU387
+ 1229 0262 4FF08043 		mov	r3, #1073741824
+ 1230 0266 BB61     		str	r3, [r7, #24]
+ 1231              	.LVL87:
+ 1232              	.L75:
+ 187:../../CM4/Core/Src/nuovo.c ****     }
+ 1233              		.loc 1 187 9 view .LVU388
+ 1234 0268 C820     		movs	r0, #200
+ 1235 026a FFF7FEFF 		bl	HAL_Delay
+ 1236              	.LVL88:
+ 1237              	.LBE25:
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1238              		.loc 1 150 48 discriminator 2 view .LVU389
+ 1239 026e 0134     		adds	r4, r4, #1
+ 1240              	.LVL89:
+ 1241              	.L68:
+ 150:../../CM4/Core/Src/nuovo.c ****         /* Trigger */
+ 1242              		.loc 1 150 35 discriminator 1 view .LVU390
+ 1243 0270 092C     		cmp	r4, #9
+ 1244 0272 60DC     		bgt	.L101
+ 1245              	.LBB28:
+ 152:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 1246              		.loc 1 152 9 view .LVU391
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 39
+
+
+ 1247 0274 0022     		movs	r2, #0
+ 1248 0276 0221     		movs	r1, #2
+ 1249 0278 1D48     		ldr	r0, .L104+28
+ 1250 027a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1251              	.LVL90:
+ 153:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_RESET_TIME_US);
+ 1252              		.loc 1 153 9 view .LVU392
+ 1253 027e 1B4B     		ldr	r3, .L104+24
+ 1254 0280 1A68     		ldr	r2, [r3]
+ 1255 0282 0023     		movs	r3, #0
+ 1256 0284 5362     		str	r3, [r2, #36]
+ 154:../../CM4/Core/Src/nuovo.c **** 
+ 1257              		.loc 1 154 9 view .LVU393
+ 1258              	.L69:
+ 154:../../CM4/Core/Src/nuovo.c **** 
+ 1259              		.loc 1 154 46 discriminator 1 view .LVU394
+ 154:../../CM4/Core/Src/nuovo.c **** 
+ 1260              		.loc 1 154 16 is_stmt 0 discriminator 1 view .LVU395
+ 1261 0286 536A     		ldr	r3, [r2, #36]
+ 154:../../CM4/Core/Src/nuovo.c **** 
+ 1262              		.loc 1 154 46 discriminator 1 view .LVU396
+ 1263 0288 012B     		cmp	r3, #1
+ 1264 028a FCD9     		bls	.L69
+ 156:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 1265              		.loc 1 156 9 is_stmt 1 view .LVU397
+ 1266 028c 0122     		movs	r2, #1
+ 1267 028e 0221     		movs	r1, #2
+ 1268 0290 1748     		ldr	r0, .L104+28
+ 1269 0292 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1270              	.LVL91:
+ 157:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_PULSE_TIME_US);
+ 1271              		.loc 1 157 9 view .LVU398
+ 1272 0296 154B     		ldr	r3, .L104+24
+ 1273 0298 1A68     		ldr	r2, [r3]
+ 1274 029a 0023     		movs	r3, #0
+ 1275 029c 5362     		str	r3, [r2, #36]
+ 158:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1276              		.loc 1 158 9 view .LVU399
+ 1277              	.L70:
+ 158:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1278              		.loc 1 158 46 discriminator 1 view .LVU400
+ 158:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1279              		.loc 1 158 16 is_stmt 0 discriminator 1 view .LVU401
+ 1280 029e 536A     		ldr	r3, [r2, #36]
+ 158:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1281              		.loc 1 158 46 discriminator 1 view .LVU402
+ 1282 02a0 092B     		cmp	r3, #9
+ 1283 02a2 FCD9     		bls	.L70
+ 159:../../CM4/Core/Src/nuovo.c **** 
+ 1284              		.loc 1 159 9 is_stmt 1 view .LVU403
+ 1285 02a4 0022     		movs	r2, #0
+ 1286 02a6 0221     		movs	r1, #2
+ 1287 02a8 1148     		ldr	r0, .L104+28
+ 1288 02aa FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1289              	.LVL92:
+ 162:../../CM4/Core/Src/nuovo.c ****         uint32_t wait_start = __HAL_TIM_GET_COUNTER(&htim2);
+ 1290              		.loc 1 162 9 view .LVU404
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 40
+
+
+ 163:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1291              		.loc 1 163 9 view .LVU405
+ 163:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1292              		.loc 1 163 31 is_stmt 0 view .LVU406
+ 1293 02ae 0F4B     		ldr	r3, .L104+24
+ 1294 02b0 1B68     		ldr	r3, [r3]
+ 163:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1295              		.loc 1 163 18 view .LVU407
+ 1296 02b2 5F6A     		ldr	r7, [r3, #36]
+ 1297              	.LVL93:
+ 164:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - wait_start)
+ 1298              		.loc 1 164 9 is_stmt 1 view .LVU408
+ 1299              	.L71:
+ 164:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - wait_start)
+ 1300              		.loc 1 164 52 view .LVU409
+ 164:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - wait_start)
+ 1301              		.loc 1 164 16 is_stmt 0 view .LVU410
+ 1302 02b4 0121     		movs	r1, #1
+ 1303 02b6 0E48     		ldr	r0, .L104+28
+ 1304 02b8 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1305              	.LVL94:
+ 164:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - wait_start)
+ 1306              		.loc 1 164 52 discriminator 1 view .LVU411
+ 1307 02bc 0028     		cmp	r0, #0
+ 1308 02be C1D1     		bne	.L72
+ 165:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1309              		.loc 1 165 13 is_stmt 1 view .LVU412
+ 165:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1310              		.loc 1 165 28 is_stmt 0 view .LVU413
+ 1311 02c0 0A4B     		ldr	r3, .L104+24
+ 1312 02c2 1B68     		ldr	r3, [r3]
+ 1313 02c4 5B6A     		ldr	r3, [r3, #36]
+ 165:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1314              		.loc 1 165 58 view .LVU414
+ 1315 02c6 DB1B     		subs	r3, r3, r7
+ 165:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1316              		.loc 1 165 16 view .LVU415
+ 1317 02c8 47F23052 		movw	r2, #30000
+ 1318 02cc 9342     		cmp	r3, r2
+ 1319 02ce F1D9     		bls	.L71
+ 1320 02d0 B8E7     		b	.L72
+ 1321              	.L105:
+ 1322 02d2 00BF     		.align	2
+ 1323              	.L104:
+ 1324 02d4 00440258 		.word	1476543488
+ 1325 02d8 00040258 		.word	1476527104
+ 1326 02dc BFC62D00 		.word	2999999
+ 1327 02e0 00ED00E0 		.word	-536810240
+ 1328 02e4 83DE1B43 		.word	1125899907
+ 1329 02e8 3F420F00 		.word	999999
+ 1330 02ec 00000000 		.word	htim2
+ 1331 02f0 000C0258 		.word	1476529152
+ 1332              	.LVL95:
+ 1333              	.L74:
+ 1334              	.LBB26:
+ 170:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1335              		.loc 1 170 13 is_stmt 1 view .LVU416
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 41
+
+
+ 170:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1336              		.loc 1 170 35 is_stmt 0 view .LVU417
+ 1337 02f4 4F4B     		ldr	r3, .L106
+ 1338 02f6 1B68     		ldr	r3, [r3]
+ 170:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1339              		.loc 1 170 22 view .LVU418
+ 1340 02f8 5D6A     		ldr	r5, [r3, #36]
+ 1341              	.LVL96:
+ 171:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start)
+ 1342              		.loc 1 171 13 is_stmt 1 view .LVU419
+ 1343              	.L76:
+ 171:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start)
+ 1344              		.loc 1 171 56 view .LVU420
+ 171:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start)
+ 1345              		.loc 1 171 20 is_stmt 0 view .LVU421
+ 1346 02fa 0121     		movs	r1, #1
+ 1347 02fc 4E48     		ldr	r0, .L106+4
+ 1348 02fe FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1349              	.LVL97:
+ 171:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - echo_start)
+ 1350              		.loc 1 171 56 discriminator 1 view .LVU422
+ 1351 0302 0128     		cmp	r0, #1
+ 1352 0304 07D1     		bne	.L77
+ 172:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1353              		.loc 1 172 17 is_stmt 1 view .LVU423
+ 172:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1354              		.loc 1 172 32 is_stmt 0 view .LVU424
+ 1355 0306 4B4B     		ldr	r3, .L106
+ 1356 0308 1B68     		ldr	r3, [r3]
+ 1357 030a 5B6A     		ldr	r3, [r3, #36]
+ 172:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1358              		.loc 1 172 62 view .LVU425
+ 1359 030c 5B1B     		subs	r3, r3, r5
+ 172:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1360              		.loc 1 172 20 view .LVU426
+ 1361 030e 46F29052 		movw	r2, #26000
+ 1362 0312 9342     		cmp	r3, r2
+ 1363 0314 F1D9     		bls	.L76
+ 1364              	.L77:
+ 175:../../CM4/Core/Src/nuovo.c ****             got_echo = 1U;
+ 1365              		.loc 1 175 13 is_stmt 1 view .LVU427
+ 175:../../CM4/Core/Src/nuovo.c ****             got_echo = 1U;
+ 1366              		.loc 1 175 36 is_stmt 0 view .LVU428
+ 1367 0316 474B     		ldr	r3, .L106
+ 1368 0318 1B68     		ldr	r3, [r3]
+ 1369 031a 5E6A     		ldr	r6, [r3, #36]
+ 1370              	.LVL98:
+ 175:../../CM4/Core/Src/nuovo.c ****             got_echo = 1U;
+ 1371              		.loc 1 175 23 view .LVU429
+ 1372 031c 761B     		subs	r6, r6, r5
+ 1373              	.LVL99:
+ 176:../../CM4/Core/Src/nuovo.c ****             any_echo = 1U;
+ 1374              		.loc 1 176 13 is_stmt 1 view .LVU430
+ 177:../../CM4/Core/Src/nuovo.c ****         }
+ 1375              		.loc 1 177 13 view .LVU431
+ 177:../../CM4/Core/Src/nuovo.c ****         }
+ 1376              		.loc 1 177 13 is_stmt 0 view .LVU432
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 42
+
+
+ 1377              	.LBE26:
+ 180:../../CM4/Core/Src/nuovo.c ****             /* GREEN blink = echo received this attempt */
+ 1378              		.loc 1 180 9 is_stmt 1 view .LVU433
+ 182:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1379              		.loc 1 182 13 view .LVU434
+ 1380 031e 474D     		ldr	r5, .L106+8
+ 1381              	.LVL100:
+ 182:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1382              		.loc 1 182 13 is_stmt 0 view .LVU435
+ 1383 0320 0123     		movs	r3, #1
+ 1384 0322 AB61     		str	r3, [r5, #24]
+ 182:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1385              		.loc 1 182 29 is_stmt 1 view .LVU436
+ 1386 0324 4FF49670 		mov	r0, #300
+ 1387 0328 FFF7FEFF 		bl	HAL_Delay
+ 1388              	.LVL101:
+ 182:../../CM4/Core/Src/nuovo.c ****         } else {
+ 1389              		.loc 1 182 46 discriminator 1 view .LVU437
+ 1390 032c 4FF48033 		mov	r3, #65536
+ 1391 0330 AB61     		str	r3, [r5, #24]
+ 1392              	.LBB27:
+ 177:../../CM4/Core/Src/nuovo.c ****         }
+ 1393              		.loc 1 177 22 is_stmt 0 view .LVU438
+ 1394 0332 3D46     		mov	r5, r7
+ 1395              	.LBE27:
+ 1396 0334 98E7     		b	.L75
+ 1397              	.LVL102:
+ 1398              	.L101:
+ 177:../../CM4/Core/Src/nuovo.c ****         }
+ 1399              		.loc 1 177 22 view .LVU439
+ 1400              	.LBE28:
+ 1401              	.LBE29:
+ 189:../../CM4/Core/Src/nuovo.c **** 
+ 1402              		.loc 1 189 5 is_stmt 1 view .LVU440
+ 1403 0336 4FF47A70 		mov	r0, #1000
+ 1404 033a FFF7FEFF 		bl	HAL_Delay
+ 1405              	.LVL103:
+ 197:../../CM4/Core/Src/nuovo.c ****         /* Solid red = complete failure, check wiring */
+ 1406              		.loc 1 197 5 view .LVU441
+ 197:../../CM4/Core/Src/nuovo.c ****         /* Solid red = complete failure, check wiring */
+ 1407              		.loc 1 197 8 is_stmt 0 view .LVU442
+ 1408 033e 25B9     		cbnz	r5, .L80
+ 199:../../CM4/Core/Src/nuovo.c ****         while (1);
+ 1409              		.loc 1 199 9 is_stmt 1 view .LVU443
+ 1410 0340 3E4B     		ldr	r3, .L106+8
+ 1411 0342 4FF48042 		mov	r2, #16384
+ 1412 0346 9A61     		str	r2, [r3, #24]
+ 1413              	.L81:
+ 200:../../CM4/Core/Src/nuovo.c ****     }
+ 1414              		.loc 1 200 9 view .LVU444
+ 200:../../CM4/Core/Src/nuovo.c ****     }
+ 1415              		.loc 1 200 15 view .LVU445
+ 1416 0348 FEE7     		b	.L81
+ 1417              	.L80:
+ 204:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ 1418              		.loc 1 204 5 view .LVU446
+ 204:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 43
+
+
+ 1419              		.loc 1 204 14 is_stmt 0 view .LVU447
+ 1420 034a 3A23     		movs	r3, #58
+ 1421 034c B6FBF3F6 		udiv	r6, r6, r3
+ 1422              	.LVL104:
+ 204:../../CM4/Core/Src/nuovo.c ****     while (1) {
+ 1423              		.loc 1 204 14 view .LVU448
+ 1424 0350 4EE0     		b	.L90
+ 1425              	.LVL105:
+ 1426              	.L95:
+ 1427              	.LBB30:
+ 207:../../CM4/Core/Src/nuovo.c ****         if (blinks > 20U)  { blinks = 20U; }
+ 1428              		.loc 1 207 37 discriminator 1 view .LVU449
+ 1429 0352 0127     		movs	r7, #1
+ 1430              	.L82:
+ 1431              	.LVL106:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1432              		.loc 1 210 9 is_stmt 1 view .LVU450
+ 1433              	.LBB31:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1434              		.loc 1 210 14 view .LVU451
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1435              		.loc 1 210 23 is_stmt 0 view .LVU452
+ 1436 0354 0024     		movs	r4, #0
+ 1437              	.LVL107:
+ 1438              	.L83:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1439              		.loc 1 210 32 is_stmt 1 discriminator 1 view .LVU453
+ 1440 0356 A742     		cmp	r7, r4
+ 1441 0358 13D9     		bls	.L102
+ 211:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_OFF(); HAL_Delay(150U);
+ 1442              		.loc 1 211 13 view .LVU454
+ 1443 035a 384D     		ldr	r5, .L106+8
+ 1444 035c 0123     		movs	r3, #1
+ 1445 035e AB61     		str	r3, [r5, #24]
+ 211:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_OFF(); HAL_Delay(150U);
+ 1446              		.loc 1 211 29 view .LVU455
+ 1447 0360 9620     		movs	r0, #150
+ 1448 0362 FFF7FEFF 		bl	HAL_Delay
+ 1449              	.LVL108:
+ 212:../../CM4/Core/Src/nuovo.c ****             printf("LED ACCESO %lu\n", dist_cm );
+ 1450              		.loc 1 212 13 view .LVU456
+ 1451 0366 4FF48033 		mov	r3, #65536
+ 1452 036a AB61     		str	r3, [r5, #24]
+ 212:../../CM4/Core/Src/nuovo.c ****             printf("LED ACCESO %lu\n", dist_cm );
+ 1453              		.loc 1 212 30 view .LVU457
+ 1454 036c 9620     		movs	r0, #150
+ 1455 036e FFF7FEFF 		bl	HAL_Delay
+ 1456              	.LVL109:
+ 213:../../CM4/Core/Src/nuovo.c ****         }
+ 1457              		.loc 1 213 13 view .LVU458
+ 1458 0372 3146     		mov	r1, r6
+ 1459 0374 3248     		ldr	r0, .L106+12
+ 1460 0376 FFF7FEFF 		bl	printf
+ 1461              	.LVL110:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1462              		.loc 1 210 43 discriminator 3 view .LVU459
+ 1463 037a 0134     		adds	r4, r4, #1
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 44
+
+
+ 1464              	.LVL111:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1465              		.loc 1 210 43 is_stmt 0 discriminator 3 view .LVU460
+ 1466 037c EBE7     		b	.L83
+ 1467              	.LVL112:
+ 1468              	.L96:
+ 210:../../CM4/Core/Src/nuovo.c ****             LED_GREEN_ON(); HAL_Delay(150U);
+ 1469              		.loc 1 210 43 discriminator 3 view .LVU461
+ 1470              	.LBE31:
+ 208:../../CM4/Core/Src/nuovo.c **** 
+ 1471              		.loc 1 208 37 discriminator 1 view .LVU462
+ 1472 037e 1427     		movs	r7, #20
+ 1473 0380 E8E7     		b	.L82
+ 1474              	.LVL113:
+ 1475              	.L102:
+ 215:../../CM4/Core/Src/nuovo.c **** 
+ 1476              		.loc 1 215 9 is_stmt 1 view .LVU463
+ 1477 0382 40F2DC50 		movw	r0, #1500
+ 1478 0386 FFF7FEFF 		bl	HAL_Delay
+ 1479              	.LVL114:
+ 218:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 1480              		.loc 1 218 9 view .LVU464
+ 1481 038a 0022     		movs	r2, #0
+ 1482 038c 0221     		movs	r1, #2
+ 1483 038e 2A48     		ldr	r0, .L106+4
+ 1484 0390 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1485              	.LVL115:
+ 219:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_RESET_TIME_US);
+ 1486              		.loc 1 219 9 view .LVU465
+ 1487 0394 274B     		ldr	r3, .L106
+ 1488 0396 1A68     		ldr	r2, [r3]
+ 1489 0398 0023     		movs	r3, #0
+ 1490 039a 5362     		str	r3, [r2, #36]
+ 220:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1491              		.loc 1 220 9 view .LVU466
+ 1492              	.L85:
+ 220:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1493              		.loc 1 220 46 discriminator 1 view .LVU467
+ 220:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1494              		.loc 1 220 16 is_stmt 0 discriminator 1 view .LVU468
+ 1495 039c 536A     		ldr	r3, [r2, #36]
+ 220:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+ 1496              		.loc 1 220 46 discriminator 1 view .LVU469
+ 1497 039e 012B     		cmp	r3, #1
+ 1498 03a0 FCD9     		bls	.L85
+ 221:../../CM4/Core/Src/nuovo.c ****         __HAL_TIM_SET_COUNTER(&htim2, 0);
+ 1499              		.loc 1 221 9 is_stmt 1 view .LVU470
+ 1500 03a2 0122     		movs	r2, #1
+ 1501 03a4 0221     		movs	r1, #2
+ 1502 03a6 2448     		ldr	r0, .L106+4
+ 1503 03a8 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1504              	.LVL116:
+ 222:../../CM4/Core/Src/nuovo.c ****         while (__HAL_TIM_GET_COUNTER(&htim2) < TRIG_PULSE_TIME_US);
+ 1505              		.loc 1 222 9 view .LVU471
+ 1506 03ac 214B     		ldr	r3, .L106
+ 1507 03ae 1A68     		ldr	r2, [r3]
+ 1508 03b0 0023     		movs	r3, #0
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 45
+
+
+ 1509 03b2 5362     		str	r3, [r2, #36]
+ 223:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1510              		.loc 1 223 9 view .LVU472
+ 1511              	.L86:
+ 223:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1512              		.loc 1 223 46 discriminator 1 view .LVU473
+ 223:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1513              		.loc 1 223 16 is_stmt 0 discriminator 1 view .LVU474
+ 1514 03b4 536A     		ldr	r3, [r2, #36]
+ 223:../../CM4/Core/Src/nuovo.c ****         HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+ 1515              		.loc 1 223 46 discriminator 1 view .LVU475
+ 1516 03b6 092B     		cmp	r3, #9
+ 1517 03b8 FCD9     		bls	.L86
+ 224:../../CM4/Core/Src/nuovo.c **** 
+ 1518              		.loc 1 224 9 is_stmt 1 view .LVU476
+ 1519 03ba 0022     		movs	r2, #0
+ 1520 03bc 0221     		movs	r1, #2
+ 1521 03be 1E48     		ldr	r0, .L106+4
+ 1522 03c0 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1523              	.LVL117:
+ 226:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1524              		.loc 1 226 9 view .LVU477
+ 226:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1525              		.loc 1 226 23 is_stmt 0 view .LVU478
+ 1526 03c4 1B4B     		ldr	r3, .L106
+ 1527 03c6 1B68     		ldr	r3, [r3]
+ 226:../../CM4/Core/Src/nuovo.c ****         while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_RESET) {
+ 1528              		.loc 1 226 18 view .LVU479
+ 1529 03c8 5C6A     		ldr	r4, [r3, #36]
+ 1530              	.LVL118:
+ 227:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - ws)
+ 1531              		.loc 1 227 9 is_stmt 1 view .LVU480
+ 1532              	.L87:
+ 227:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - ws)
+ 1533              		.loc 1 227 52 view .LVU481
+ 227:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - ws)
+ 1534              		.loc 1 227 16 is_stmt 0 view .LVU482
+ 1535 03ca 0121     		movs	r1, #1
+ 1536 03cc 1A48     		ldr	r0, .L106+4
+ 1537 03ce FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1538              	.LVL119:
+ 227:../../CM4/Core/Src/nuovo.c ****             if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - ws)
+ 1539              		.loc 1 227 52 discriminator 1 view .LVU483
+ 1540 03d2 38B9     		cbnz	r0, .L88
+ 228:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1541              		.loc 1 228 13 is_stmt 1 view .LVU484
+ 228:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1542              		.loc 1 228 28 is_stmt 0 view .LVU485
+ 1543 03d4 174B     		ldr	r3, .L106
+ 1544 03d6 1B68     		ldr	r3, [r3]
+ 1545 03d8 5B6A     		ldr	r3, [r3, #36]
+ 228:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1546              		.loc 1 228 58 view .LVU486
+ 1547 03da 1B1B     		subs	r3, r3, r4
+ 228:../../CM4/Core/Src/nuovo.c ****                     > ECHO_WAIT_TIMEOUT_US) { break; }
+ 1548              		.loc 1 228 16 view .LVU487
+ 1549 03dc 47F23052 		movw	r2, #30000
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 46
+
+
+ 1550 03e0 9342     		cmp	r3, r2
+ 1551 03e2 F2D9     		bls	.L87
+ 1552              	.L88:
+ 231:../../CM4/Core/Src/nuovo.c ****             uint32_t es = __HAL_TIM_GET_COUNTER(&htim2);
+ 1553              		.loc 1 231 9 is_stmt 1 view .LVU488
+ 231:../../CM4/Core/Src/nuovo.c ****             uint32_t es = __HAL_TIM_GET_COUNTER(&htim2);
+ 1554              		.loc 1 231 13 is_stmt 0 view .LVU489
+ 1555 03e4 0121     		movs	r1, #1
+ 1556 03e6 1448     		ldr	r0, .L106+4
+ 1557 03e8 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1558              	.LVL120:
+ 231:../../CM4/Core/Src/nuovo.c ****             uint32_t es = __HAL_TIM_GET_COUNTER(&htim2);
+ 1559              		.loc 1 231 12 discriminator 1 view .LVU490
+ 1560 03ec 0128     		cmp	r0, #1
+ 1561 03ee 05D0     		beq	.L103
+ 1562              	.LVL121:
+ 1563              	.L90:
+ 231:../../CM4/Core/Src/nuovo.c ****             uint32_t es = __HAL_TIM_GET_COUNTER(&htim2);
+ 1564              		.loc 1 231 12 discriminator 1 view .LVU491
+ 1565              	.LBE30:
+ 205:../../CM4/Core/Src/nuovo.c ****         uint32_t blinks = dist_cm;
+ 1566              		.loc 1 205 5 is_stmt 1 view .LVU492
+ 1567              	.LBB33:
+ 206:../../CM4/Core/Src/nuovo.c ****         if (blinks == 0U)  { blinks = 1U; }
+ 1568              		.loc 1 206 9 view .LVU493
+ 207:../../CM4/Core/Src/nuovo.c ****         if (blinks > 20U)  { blinks = 20U; }
+ 1569              		.loc 1 207 9 view .LVU494
+ 207:../../CM4/Core/Src/nuovo.c ****         if (blinks > 20U)  { blinks = 20U; }
+ 1570              		.loc 1 207 12 is_stmt 0 view .LVU495
+ 1571 03f0 002E     		cmp	r6, #0
+ 1572 03f2 AED0     		beq	.L95
+ 208:../../CM4/Core/Src/nuovo.c **** 
+ 1573              		.loc 1 208 9 is_stmt 1 view .LVU496
+ 208:../../CM4/Core/Src/nuovo.c **** 
+ 1574              		.loc 1 208 12 is_stmt 0 view .LVU497
+ 1575 03f4 142E     		cmp	r6, #20
+ 1576 03f6 C2D8     		bhi	.L96
+ 1577 03f8 3746     		mov	r7, r6
+ 1578 03fa ABE7     		b	.L82
+ 1579              	.LVL122:
+ 1580              	.L103:
+ 1581              	.LBB32:
+ 232:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1582              		.loc 1 232 13 is_stmt 1 view .LVU498
+ 232:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1583              		.loc 1 232 27 is_stmt 0 view .LVU499
+ 1584 03fc 0D4B     		ldr	r3, .L106
+ 1585 03fe 1B68     		ldr	r3, [r3]
+ 232:../../CM4/Core/Src/nuovo.c ****             while (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == GPIO_PIN_SET) {
+ 1586              		.loc 1 232 22 view .LVU500
+ 1587 0400 5C6A     		ldr	r4, [r3, #36]
+ 1588              	.LVL123:
+ 233:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es)
+ 1589              		.loc 1 233 13 is_stmt 1 view .LVU501
+ 1590              	.L91:
+ 233:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es)
+ 1591              		.loc 1 233 56 view .LVU502
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 47
+
+
+ 233:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es)
+ 1592              		.loc 1 233 20 is_stmt 0 view .LVU503
+ 1593 0402 0121     		movs	r1, #1
+ 1594 0404 0C48     		ldr	r0, .L106+4
+ 1595 0406 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 1596              	.LVL124:
+ 233:../../CM4/Core/Src/nuovo.c ****                 if ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - es)
+ 1597              		.loc 1 233 56 discriminator 1 view .LVU504
+ 1598 040a 0128     		cmp	r0, #1
+ 1599 040c 08D0     		beq	.L93
+ 1600              	.L92:
+ 237:../../CM4/Core/Src/nuovo.c ****             dist_cm   = echo_time / 58U;
+ 1601              		.loc 1 237 13 is_stmt 1 view .LVU505
+ 237:../../CM4/Core/Src/nuovo.c ****             dist_cm   = echo_time / 58U;
+ 1602              		.loc 1 237 36 is_stmt 0 view .LVU506
+ 1603 040e 094B     		ldr	r3, .L106
+ 1604 0410 1B68     		ldr	r3, [r3]
+ 1605 0412 5E6A     		ldr	r6, [r3, #36]
+ 1606              	.LVL125:
+ 237:../../CM4/Core/Src/nuovo.c ****             dist_cm   = echo_time / 58U;
+ 1607              		.loc 1 237 23 view .LVU507
+ 1608 0414 361B     		subs	r6, r6, r4
+ 1609              	.LVL126:
+ 238:../../CM4/Core/Src/nuovo.c ****         }
+ 1610              		.loc 1 238 13 is_stmt 1 view .LVU508
+ 238:../../CM4/Core/Src/nuovo.c ****         }
+ 1611              		.loc 1 238 23 is_stmt 0 view .LVU509
+ 1612 0416 0B4B     		ldr	r3, .L106+16
+ 1613 0418 A3FB0636 		umull	r3, r6, r3, r6
+ 1614              	.LVL127:
+ 238:../../CM4/Core/Src/nuovo.c ****         }
+ 1615              		.loc 1 238 23 view .LVU510
+ 1616 041c 7609     		lsrs	r6, r6, #5
+ 1617              	.LVL128:
+ 238:../../CM4/Core/Src/nuovo.c ****         }
+ 1618              		.loc 1 238 23 view .LVU511
+ 1619 041e E7E7     		b	.L90
+ 1620              	.LVL129:
+ 1621              	.L93:
+ 234:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1622              		.loc 1 234 17 is_stmt 1 view .LVU512
+ 234:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1623              		.loc 1 234 32 is_stmt 0 view .LVU513
+ 1624 0420 044B     		ldr	r3, .L106
+ 1625 0422 1B68     		ldr	r3, [r3]
+ 1626 0424 5B6A     		ldr	r3, [r3, #36]
+ 234:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1627              		.loc 1 234 62 view .LVU514
+ 1628 0426 1B1B     		subs	r3, r3, r4
+ 234:../../CM4/Core/Src/nuovo.c ****                         > ECHO_PULSE_TIMEOUT_US) { break; }
+ 1629              		.loc 1 234 20 view .LVU515
+ 1630 0428 46F29052 		movw	r2, #26000
+ 1631 042c 9342     		cmp	r3, r2
+ 1632 042e E8D9     		bls	.L91
+ 1633 0430 EDE7     		b	.L92
+ 1634              	.L107:
+ 1635 0432 00BF     		.align	2
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 48
+
+
+ 1636              	.L106:
+ 1637 0434 00000000 		.word	htim2
+ 1638 0438 000C0258 		.word	1476529152
+ 1639 043c 00040258 		.word	1476527104
+ 1640 0440 00000000 		.word	.LC0
+ 1641 0444 09CB3D8D 		.word	-1925330167
+ 1642              	.LBE32:
+ 1643              	.LBE33:
+ 1644              		.cfi_endproc
+ 1645              	.LFE135:
+ 1647              		.section	.text._write,"ax",%progbits
+ 1648              		.align	1
+ 1649              		.global	_write
+ 1650              		.syntax unified
+ 1651              		.thumb
+ 1652              		.thumb_func
+ 1654              	_write:
+ 1655              	.LVL130:
+ 1656              	.LFB141:
+ 393:../../CM4/Core/Src/nuovo.c ****     }
+ 394:../../CM4/Core/Src/nuovo.c **** }
+ 395:../../CM4/Core/Src/nuovo.c **** 
+ 396:../../CM4/Core/Src/nuovo.c **** 
+ 397:../../CM4/Core/Src/nuovo.c **** int _write(int file, char *ptr, int len)
+ 398:../../CM4/Core/Src/nuovo.c **** {
+ 1657              		.loc 1 398 1 is_stmt 1 view -0
+ 1658              		.cfi_startproc
+ 1659              		@ args = 0, pretend = 0, frame = 0
+ 1660              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1661              		.loc 1 398 1 is_stmt 0 view .LVU517
+ 1662 0000 10B5     		push	{r4, lr}
+ 1663              	.LCFI15:
+ 1664              		.cfi_def_cfa_offset 8
+ 1665              		.cfi_offset 4, -8
+ 1666              		.cfi_offset 14, -4
+ 1667 0002 1446     		mov	r4, r2
+ 399:../../CM4/Core/Src/nuovo.c ****     /* La funzione HAL_UART_Transmit è un algoritmo bloccante O(n).
+ 400:../../CM4/Core/Src/nuovo.c ****      * Sospenderà l'esecuzione del core finché l'ultimo bit dell'intero 
+ 401:../../CM4/Core/Src/nuovo.c ****      * buffer non sarà fisicamente uscito dal pin TX.
+ 402:../../CM4/Core/Src/nuovo.c ****      * Parametri: l'handle della UART, il puntatore ai dati, la lunghezza, 
+ 403:../../CM4/Core/Src/nuovo.c ****      * e un timeout di sicurezza (es. 1000 millisecondi).
+ 404:../../CM4/Core/Src/nuovo.c ****      */
+ 405:../../CM4/Core/Src/nuovo.c ****     HAL_UART_Transmit(&huart4, (uint8_t *)ptr, len, 1000);
+ 1668              		.loc 1 405 5 is_stmt 1 view .LVU518
+ 1669 0004 4FF47A73 		mov	r3, #1000
+ 1670 0008 92B2     		uxth	r2, r2
+ 1671              	.LVL131:
+ 1672              		.loc 1 405 5 is_stmt 0 view .LVU519
+ 1673 000a 0248     		ldr	r0, .L110
+ 1674              	.LVL132:
+ 1675              		.loc 1 405 5 view .LVU520
+ 1676 000c FFF7FEFF 		bl	HAL_UART_Transmit
+ 1677              	.LVL133:
+ 406:../../CM4/Core/Src/nuovo.c ****     return len;
+ 1678              		.loc 1 406 5 is_stmt 1 view .LVU521
+ 407:../../CM4/Core/Src/nuovo.c **** }...
+ 1679              		.loc 1 407 1 is_stmt 0 view .LVU522
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 49
+
+
+ 1680 0010 2046     		mov	r0, r4
+ 1681 0012 10BD     		pop	{r4, pc}
+ 1682              	.LVL134:
+ 1683              	.L111:
+ 1684              		.loc 1 407 1 view .LVU523
+ 1685              		.align	2
+ 1686              	.L110:
+ 1687 0014 00000000 		.word	huart4
+ 1688              		.cfi_endproc
+ 1689              	.LFE141:
+ 1691              		.global	huart4
+ 1692              		.section	.bss.huart4,"aw",%nobits
+ 1693              		.align	2
+ 1696              	huart4:
+ 1697 0000 00000000 		.space	148
+ 1697      00000000 
+ 1697      00000000 
+ 1697      00000000 
+ 1697      00000000 
+ 1698              		.global	htim2
+ 1699              		.section	.bss.htim2,"aw",%nobits
+ 1700              		.align	2
+ 1703              	htim2:
+ 1704 0000 00000000 		.space	76
+ 1704      00000000 
+ 1704      00000000 
+ 1704      00000000 
+ 1704      00000000 
+ 1705              		.text
+ 1706              	.Letext0:
+ 1707              		.file 3 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/ma
+ 1708              		.file 4 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/sy
+ 1709              		.file 5 "../../Drivers/CMSIS/Include/core_cm4.h"
+ 1710              		.file 6 "../../Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h755xx.h"
+ 1711              		.file 7 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h"
+ 1712              		.file 8 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h"
+ 1713              		.file 9 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h"
+ 1714              		.file 10 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h"
+ 1715              		.file 11 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h"
+ 1716              		.file 12 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h"
+ 1717              		.file 13 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h"
+ 1718              		.file 14 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h"
+ 1719              		.file 15 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h"
+ 1720              		.file 16 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/s
+ 1721              		.file 17 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h"
+ 1722              		.file 18 "<built-in>"
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s 			page 50
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 nuovo.c
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:19     .text.MX_GPIO_Init:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:24     .text.MX_GPIO_Init:00000000 MX_GPIO_Init
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:174    .text.MX_GPIO_Init:000000b4 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:181    .text.Error_Handler:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:187    .text.Error_Handler:00000000 Error_Handler
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:270    .text.Error_Handler:00000040 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:277    .text.SystemClock_Config:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:282    .text.SystemClock_Config:00000000 SystemClock_Config
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:466    .text.SystemClock_Config:000000c4 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:472    .text.MX_TIM2_Init:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:477    .text.MX_TIM2_Init:00000000 MX_TIM2_Init
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:596    .text.MX_TIM2_Init:0000007c $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1703   .bss.htim2:00000000 htim2
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:602    .text.MX_UART4_Init:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:607    .text.MX_UART4_Init:00000000 MX_UART4_Init
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:706    .text.MX_UART4_Init:00000058 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1696   .bss.huart4:00000000 huart4
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:712    .rodata.main.str1.4:00000000 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:716    .text.main:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:722    .text.main:00000000 main
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1324   .text.main:000002d4 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1337   .text.main:000002f4 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1637   .text.main:00000434 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1648   .text._write:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1654   .text._write:00000000 _write
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1687   .text._write:00000014 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1693   .bss.huart4:00000000 $d
+C:\Users\minis\AppData\Local\Temp\ccEJxbB6.s:1700   .bss.htim2:00000000 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_WritePin
+HAL_GPIO_Init
+memset
+HAL_PWREx_ConfigSupply
+HAL_RCC_OscConfig
+HAL_RCC_ClockConfig
+HAL_TIM_Base_Init
+HAL_TIM_ConfigClockSource
+HAL_TIMEx_MasterConfigSynchronization
+HAL_UART_Init
+HAL_UARTEx_SetTxFifoThreshold
+HAL_UARTEx_SetRxFifoThreshold
+HAL_UARTEx_DisableFifoMode
+HAL_Init
+HAL_RCC_GetPCLK1Freq
+HAL_TIM_GenerateEvent
+HAL_TIM_Base_Start
+HAL_Delay
+HAL_GetTick
+HAL_GPIO_ReadPin
+printf
+HAL_UART_Transmit

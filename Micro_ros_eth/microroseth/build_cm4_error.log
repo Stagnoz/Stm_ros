@@ -1,0 +1,8 @@
+make: Entering directory `C:/Polispace_Board/Micro_ros_eth/microroseth/Makefile/CM4'
+arm-none-eabi-gcc -c -mcpu=cortex-m7 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -DCORE_CM4 -DUSE_HAL_DRIVER -DSTM32H755xx -DUSE_PWR_DIRECT_SMPS_SUPPLY -DUSE_NUCLEO_64 -I../../CM4/Core/Inc -I../../Common/Inc -I../../Drivers/STM32H7xx_HAL_Driver/Inc -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I../../Drivers/BSP/STM32H7xx_Nucleo -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I../../Drivers/CMSIS/Include -I../../micro_ros_stm32cubemx_utils/microros_static_library/libmicroros/microros_include -I../../micro_ros_stm32cubemx_utils/extra_sources/microros_transports -Og -Wall -fdata-sections -ffunction-sections -g -gdwarf-2 -MMD -MP -MF"build/udp_transport.d" -Wa,-a,-ad,-alms=build/udp_transport.lst ../../micro_ros_stm32cubemx_utils/extra_sources/microros_transports/udp_transport.c -o build/udp_transport.o
+../../micro_ros_stm32cubemx_utils/extra_sources/microros_transports/udp_transport.c:6:10: fatal error: cmsis_os.h: No such file or directory
+    6 | #include "cmsis_os.h"
+      |          ^~~~~~~~~~~~
+compilation terminated.
+make: *** [build/udp_transport.o] Error 1
+make: Leaving directory `C:/Polispace_Board/Micro_ros_eth/microroseth/Makefile/CM4'

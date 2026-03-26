@@ -1,0 +1,311 @@
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"stm32h7xx_hal_msp.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "../../CM4/Core/Src/stm32h7xx_hal_msp.c"
+  20              		.section	.text.HAL_MspInit,"ax",%progbits
+  21              		.align	1
+  22              		.global	HAL_MspInit
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	HAL_MspInit:
+  28              	.LFB135:
+   1:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN Header */
+   2:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /**
+   3:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   ******************************************************************************
+   4:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * @file         stm32h7xx_hal_msp.c
+   5:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * @brief        This file provides code for the MSP Initialization
+   6:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   *               and de-Initialization codes.
+   7:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   ******************************************************************************
+   8:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * @attention
+   9:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   *
+  10:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * Copyright (c) 2025 STMicroelectronics.
+  11:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * All rights reserved.
+  12:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   *
+  13:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * This software is licensed under terms that can be found in the LICENSE file
+  14:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * in the root directory of this software component.
+  15:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * If no LICENSE file comes with this software, it is provided AS-IS.
+  16:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   *
+  17:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   ******************************************************************************
+  18:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   */
+  19:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END Header */
+  20:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  21:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Includes ------------------------------------------------------------------*/
+  22:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** #include "main.h"
+  23:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN Includes */
+  24:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  25:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END Includes */
+  26:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  27:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Private typedef -----------------------------------------------------------*/
+  28:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN TD */
+  29:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  30:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END TD */
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 2
+
+
+  31:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  32:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Private define ------------------------------------------------------------*/
+  33:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN Define */
+  34:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  35:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END Define */
+  36:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  37:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Private macro -------------------------------------------------------------*/
+  38:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN Macro */
+  39:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  40:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END Macro */
+  41:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  42:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Private variables ---------------------------------------------------------*/
+  43:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN PV */
+  44:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  45:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END PV */
+  46:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  47:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* Private function prototypes -----------------------------------------------*/
+  48:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN PFP */
+  49:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  50:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END PFP */
+  51:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  52:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* External functions --------------------------------------------------------*/
+  53:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN ExternalFunctions */
+  54:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  55:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END ExternalFunctions */
+  56:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  57:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN 0 */
+  58:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  59:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE END 0 */
+  60:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /**
+  61:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   * Initializes the Global MSP.
+  62:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   */
+  63:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** void HAL_MspInit(void)
+  64:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** {
+  29              		.loc 1 64 1 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 8
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+  34 0000 82B0     		sub	sp, sp, #8
+  35              	.LCFI0:
+  36              		.cfi_def_cfa_offset 8
+  65:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  66:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   /* USER CODE BEGIN MspInit 0 */
+  67:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  68:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   /* USER CODE END MspInit 0 */
+  69:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  70:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   __HAL_RCC_SYSCFG_CLK_ENABLE();
+  37              		.loc 1 70 3 view .LVU1
+  38              	.LBB2:
+  39              		.loc 1 70 3 view .LVU2
+  40              		.loc 1 70 3 view .LVU3
+  41 0002 074B     		ldr	r3, .L3
+  42 0004 D3F8F420 		ldr	r2, [r3, #244]
+  43 0008 42F00202 		orr	r2, r2, #2
+  44 000c C3F8F420 		str	r2, [r3, #244]
+  45              		.loc 1 70 3 view .LVU4
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 3
+
+
+  46 0010 D3F8F430 		ldr	r3, [r3, #244]
+  47 0014 03F00203 		and	r3, r3, #2
+  48 0018 0193     		str	r3, [sp, #4]
+  49              		.loc 1 70 3 view .LVU5
+  50 001a 019B     		ldr	r3, [sp, #4]
+  51              	.LBE2:
+  52              		.loc 1 70 3 view .LVU6
+  71:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  72:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   /* System interrupt init*/
+  73:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  74:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   /* USER CODE BEGIN MspInit 1 */
+  75:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  76:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   /* USER CODE END MspInit 1 */
+  77:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** }
+  53              		.loc 1 77 1 is_stmt 0 view .LVU7
+  54 001c 02B0     		add	sp, sp, #8
+  55              	.LCFI1:
+  56              		.cfi_def_cfa_offset 0
+  57              		@ sp needed
+  58 001e 7047     		bx	lr
+  59              	.L4:
+  60              		.align	2
+  61              	.L3:
+  62 0020 00440258 		.word	1476543488
+  63              		.cfi_endproc
+  64              	.LFE135:
+  66              		.section	.text.HAL_UART_MspInit,"ax",%progbits
+  67              		.align	1
+  68              		.global	HAL_UART_MspInit
+  69              		.syntax unified
+  70              		.thumb
+  71              		.thumb_func
+  73              	HAL_UART_MspInit:
+  74              	.LVL0:
+  75              	.LFB136:
+  78:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  79:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /* USER CODE BEGIN 1 */
+  80:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  81:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** /**
+  82:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****  * @brief  Configura i pin GPIO per UART4.
+  83:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****  *         PA0 → UART4_TX  (AF8)
+  84:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****  *         PA1 → UART4_RX  (AF8)
+  85:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****  */
+  86:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+  87:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** {
+  76              		.loc 1 87 1 is_stmt 1 view -0
+  77              		.cfi_startproc
+  78              		@ args = 0, pretend = 0, frame = 32
+  79              		@ frame_needed = 0, uses_anonymous_args = 0
+  88:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   if (huart->Instance == UART4)
+  80              		.loc 1 88 3 view .LVU9
+  81              		.loc 1 88 12 is_stmt 0 view .LVU10
+  82 0000 0268     		ldr	r2, [r0]
+  83              		.loc 1 88 6 view .LVU11
+  84 0002 194B     		ldr	r3, .L12
+  85 0004 9A42     		cmp	r2, r3
+  86 0006 00D0     		beq	.L11
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 4
+
+
+  87 0008 7047     		bx	lr
+  88              	.L11:
+  87:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   if (huart->Instance == UART4)
+  89              		.loc 1 87 1 view .LVU12
+  90 000a 00B5     		push	{lr}
+  91              	.LCFI2:
+  92              		.cfi_def_cfa_offset 4
+  93              		.cfi_offset 14, -4
+  94 000c 89B0     		sub	sp, sp, #36
+  95              	.LCFI3:
+  96              		.cfi_def_cfa_offset 40
+  97              	.LBB3:
+  89:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   {
+  90:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  98              		.loc 1 90 5 is_stmt 1 view .LVU13
+  99              		.loc 1 90 22 is_stmt 0 view .LVU14
+ 100 000e 03A9     		add	r1, sp, #12
+ 101 0010 0023     		movs	r3, #0
+ 102 0012 0393     		str	r3, [sp, #12]
+ 103 0014 4B60     		str	r3, [r1, #4]
+ 104 0016 8B60     		str	r3, [r1, #8]
+ 105 0018 CB60     		str	r3, [r1, #12]
+ 106 001a 0B61     		str	r3, [r1, #16]
+  91:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  92:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     __HAL_RCC_UART4_CLK_ENABLE();
+ 107              		.loc 1 92 5 is_stmt 1 view .LVU15
+ 108              	.LBB4:
+ 109              		.loc 1 92 5 view .LVU16
+ 110              		.loc 1 92 5 view .LVU17
+ 111 001c 134B     		ldr	r3, .L12+4
+ 112 001e D3F8E820 		ldr	r2, [r3, #232]
+ 113 0022 42F40022 		orr	r2, r2, #524288
+ 114 0026 C3F8E820 		str	r2, [r3, #232]
+ 115              		.loc 1 92 5 view .LVU18
+ 116 002a D3F8E820 		ldr	r2, [r3, #232]
+ 117 002e 02F40022 		and	r2, r2, #524288
+ 118 0032 0192     		str	r2, [sp, #4]
+ 119              		.loc 1 92 5 view .LVU19
+ 120 0034 019A     		ldr	r2, [sp, #4]
+ 121              	.LBE4:
+ 122              		.loc 1 92 5 view .LVU20
+  93:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     __HAL_RCC_GPIOA_CLK_ENABLE();
+ 123              		.loc 1 93 5 view .LVU21
+ 124              	.LBB5:
+ 125              		.loc 1 93 5 view .LVU22
+ 126              		.loc 1 93 5 view .LVU23
+ 127 0036 D3F8E020 		ldr	r2, [r3, #224]
+ 128 003a 42F00102 		orr	r2, r2, #1
+ 129 003e C3F8E020 		str	r2, [r3, #224]
+ 130              		.loc 1 93 5 view .LVU24
+ 131 0042 D3F8E030 		ldr	r3, [r3, #224]
+ 132 0046 03F00103 		and	r3, r3, #1
+ 133 004a 0293     		str	r3, [sp, #8]
+ 134              		.loc 1 93 5 view .LVU25
+ 135 004c 029B     		ldr	r3, [sp, #8]
+ 136              	.LBE5:
+ 137              		.loc 1 93 5 view .LVU26
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 5
+
+
+  94:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** 
+  95:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     /* PA0 → UART4_TX, PA1 → UART4_RX */
+  96:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitStruct.Pin       = GPIO_PIN_0 | GPIO_PIN_1;
+ 138              		.loc 1 96 5 view .LVU27
+ 139              		.loc 1 96 31 is_stmt 0 view .LVU28
+ 140 004e 0323     		movs	r3, #3
+ 141 0050 0393     		str	r3, [sp, #12]
+  97:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+ 142              		.loc 1 97 5 is_stmt 1 view .LVU29
+ 143              		.loc 1 97 31 is_stmt 0 view .LVU30
+ 144 0052 0223     		movs	r3, #2
+ 145 0054 0493     		str	r3, [sp, #16]
+  98:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 146              		.loc 1 98 5 is_stmt 1 view .LVU31
+  99:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+ 147              		.loc 1 99 5 view .LVU32
+ 100:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     GPIO_InitStruct.Alternate = GPIO_AF8_UART4;
+ 148              		.loc 1 100 5 view .LVU33
+ 149              		.loc 1 100 31 is_stmt 0 view .LVU34
+ 150 0056 0823     		movs	r3, #8
+ 151 0058 0793     		str	r3, [sp, #28]
+ 101:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 152              		.loc 1 101 5 is_stmt 1 view .LVU35
+ 153 005a 0548     		ldr	r0, .L12+8
+ 154              	.LVL1:
+ 155              		.loc 1 101 5 is_stmt 0 view .LVU36
+ 156 005c FFF7FEFF 		bl	HAL_GPIO_Init
+ 157              	.LVL2:
+ 158              	.LBE3:
+ 102:../../CM4/Core/Src/stm32h7xx_hal_msp.c ****   }
+ 103:../../CM4/Core/Src/stm32h7xx_hal_msp.c **** }
+ 159              		.loc 1 103 1 view .LVU37
+ 160 0060 09B0     		add	sp, sp, #36
+ 161              	.LCFI4:
+ 162              		.cfi_def_cfa_offset 4
+ 163              		@ sp needed
+ 164 0062 5DF804FB 		ldr	pc, [sp], #4
+ 165              	.L13:
+ 166 0066 00BF     		.align	2
+ 167              	.L12:
+ 168 0068 004C0040 		.word	1073761280
+ 169 006c 00440258 		.word	1476543488
+ 170 0070 00000258 		.word	1476526080
+ 171              		.cfi_endproc
+ 172              	.LFE136:
+ 174              		.text
+ 175              	.Letext0:
+ 176              		.file 2 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/ma
+ 177              		.file 3 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/sy
+ 178              		.file 4 "../../Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h755xx.h"
+ 179              		.file 5 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h"
+ 180              		.file 6 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h"
+ 181              		.file 7 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h"
+ 182              		.file 8 "../../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h"
+ARM GAS  C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s 			page 6
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 stm32h7xx_hal_msp.c
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:21     .text.HAL_MspInit:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:27     .text.HAL_MspInit:00000000 HAL_MspInit
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:62     .text.HAL_MspInit:00000020 $d
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:67     .text.HAL_UART_MspInit:00000000 $t
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:73     .text.HAL_UART_MspInit:00000000 HAL_UART_MspInit
+C:\Users\minis\AppData\Local\Temp\ccW5cP4U.s:168    .text.HAL_UART_MspInit:00000068 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_Init

@@ -1,0 +1,191 @@
+ARM GAS  C:\Users\minis\AppData\Local\Temp\cchjEY8e.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.arch armv7e-m
+   3              		.fpu fpv5-d16
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"usart3_debug.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "../../CM7/Core/Src/usart3_debug.c"
+  18              		.section	.text.Debug_USART3_Init,"ax",%progbits
+  19              		.align	1
+  20              		.global	Debug_USART3_Init
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	Debug_USART3_Init:
+  26              	.LFB147:
+   1:../../CM7/Core/Src/usart3_debug.c **** #include "main.h"
+   2:../../CM7/Core/Src/usart3_debug.c **** 
+   3:../../CM7/Core/Src/usart3_debug.c **** void Debug_USART3_Init(void)
+   4:../../CM7/Core/Src/usart3_debug.c **** {
+  27              		.loc 1 4 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 16
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31 0000 00B5     		push	{lr}
+  32              	.LCFI0:
+  33              		.cfi_def_cfa_offset 4
+  34              		.cfi_offset 14, -4
+  35 0002 85B0     		sub	sp, sp, #20
+  36              	.LCFI1:
+  37              		.cfi_def_cfa_offset 24
+   5:../../CM7/Core/Src/usart3_debug.c ****   COM_InitTypeDef com = {0};
+  38              		.loc 1 5 3 view .LVU1
+  39              		.loc 1 5 19 is_stmt 0 view .LVU2
+  40 0004 6946     		mov	r1, sp
+  41 0006 0020     		movs	r0, #0
+  42 0008 0090     		str	r0, [sp]
+  43 000a 0190     		str	r0, [sp, #4]
+  44 000c 0290     		str	r0, [sp, #8]
+  45 000e 0390     		str	r0, [sp, #12]
+   6:../../CM7/Core/Src/usart3_debug.c **** 
+   7:../../CM7/Core/Src/usart3_debug.c ****   com.BaudRate = 115200;
+  46              		.loc 1 7 3 is_stmt 1 view .LVU3
+  47              		.loc 1 7 16 is_stmt 0 view .LVU4
+  48 0010 4FF4E133 		mov	r3, #115200
+  49 0014 0093     		str	r3, [sp]
+   8:../../CM7/Core/Src/usart3_debug.c ****   com.WordLength = COM_WORDLENGTH_8B;
+  50              		.loc 1 8 3 is_stmt 1 view .LVU5
+ARM GAS  C:\Users\minis\AppData\Local\Temp\cchjEY8e.s 			page 2
+
+
+   9:../../CM7/Core/Src/usart3_debug.c ****   com.StopBits = COM_STOPBITS_1;
+  51              		.loc 1 9 3 view .LVU6
+  10:../../CM7/Core/Src/usart3_debug.c ****   com.Parity = COM_PARITY_NONE;
+  52              		.loc 1 10 3 view .LVU7
+  11:../../CM7/Core/Src/usart3_debug.c ****   com.HwFlowCtl = COM_HWCONTROL_NONE;
+  53              		.loc 1 11 3 view .LVU8
+  12:../../CM7/Core/Src/usart3_debug.c **** 
+  13:../../CM7/Core/Src/usart3_debug.c ****   if(BSP_COM_Init(COM1, &com) != BSP_ERROR_NONE)
+  54              		.loc 1 13 3 view .LVU9
+  55              		.loc 1 13 6 is_stmt 0 view .LVU10
+  56 0016 FFF7FEFF 		bl	BSP_COM_Init
+  57              	.LVL0:
+  58              		.loc 1 13 5 discriminator 1 view .LVU11
+  59 001a 28B9     		cbnz	r0, .L4
+  60              	.L2:
+  14:../../CM7/Core/Src/usart3_debug.c ****   {
+  15:../../CM7/Core/Src/usart3_debug.c ****     Error_Handler();
+  16:../../CM7/Core/Src/usart3_debug.c ****   }
+  17:../../CM7/Core/Src/usart3_debug.c **** 
+  18:../../CM7/Core/Src/usart3_debug.c ****   (void)BSP_COM_SelectLogPort(COM1);
+  61              		.loc 1 18 3 is_stmt 1 view .LVU12
+  62              		.loc 1 18 9 is_stmt 0 view .LVU13
+  63 001c 0020     		movs	r0, #0
+  64 001e FFF7FEFF 		bl	BSP_COM_SelectLogPort
+  65              	.LVL1:
+  19:../../CM7/Core/Src/usart3_debug.c **** }
+  66              		.loc 1 19 1 view .LVU14
+  67 0022 05B0     		add	sp, sp, #20
+  68              	.LCFI2:
+  69              		.cfi_remember_state
+  70              		.cfi_def_cfa_offset 4
+  71              		@ sp needed
+  72 0024 5DF804FB 		ldr	pc, [sp], #4
+  73              	.L4:
+  74              	.LCFI3:
+  75              		.cfi_restore_state
+  15:../../CM7/Core/Src/usart3_debug.c ****   }
+  76              		.loc 1 15 5 is_stmt 1 view .LVU15
+  77 0028 FFF7FEFF 		bl	Error_Handler
+  78              	.LVL2:
+  79 002c F6E7     		b	.L2
+  80              		.cfi_endproc
+  81              	.LFE147:
+  83              		.section	.rodata.Debug_USART3_Print.str1.4,"aMS",%progbits,1
+  84              		.align	2
+  85              	.LC0:
+  86 0000 257300   		.ascii	"%s\000"
+  87              		.section	.text.Debug_USART3_Print,"ax",%progbits
+  88              		.align	1
+  89              		.global	Debug_USART3_Print
+  90              		.syntax unified
+  91              		.thumb
+  92              		.thumb_func
+  94              	Debug_USART3_Print:
+  95              	.LVL3:
+  96              	.LFB148:
+  20:../../CM7/Core/Src/usart3_debug.c **** 
+ARM GAS  C:\Users\minis\AppData\Local\Temp\cchjEY8e.s 			page 3
+
+
+  21:../../CM7/Core/Src/usart3_debug.c **** void Debug_USART3_Print(const char *message)
+  22:../../CM7/Core/Src/usart3_debug.c **** {
+  97              		.loc 1 22 1 view -0
+  98              		.cfi_startproc
+  99              		@ args = 0, pretend = 0, frame = 0
+ 100              		@ frame_needed = 0, uses_anonymous_args = 0
+  23:../../CM7/Core/Src/usart3_debug.c ****   if(message != NULL)
+ 101              		.loc 1 23 3 view .LVU17
+ 102              		.loc 1 23 5 is_stmt 0 view .LVU18
+ 103 0000 28B1     		cbz	r0, .L8
+  22:../../CM7/Core/Src/usart3_debug.c ****   if(message != NULL)
+ 104              		.loc 1 22 1 view .LVU19
+ 105 0002 08B5     		push	{r3, lr}
+ 106              	.LCFI4:
+ 107              		.cfi_def_cfa_offset 8
+ 108              		.cfi_offset 3, -8
+ 109              		.cfi_offset 14, -4
+ 110 0004 0146     		mov	r1, r0
+  24:../../CM7/Core/Src/usart3_debug.c ****   {
+  25:../../CM7/Core/Src/usart3_debug.c ****     printf("%s", message);
+ 111              		.loc 1 25 5 is_stmt 1 view .LVU20
+ 112 0006 0248     		ldr	r0, .L11
+ 113              	.LVL4:
+ 114              		.loc 1 25 5 is_stmt 0 view .LVU21
+ 115 0008 FFF7FEFF 		bl	printf
+ 116              	.LVL5:
+  26:../../CM7/Core/Src/usart3_debug.c ****   }
+  27:../../CM7/Core/Src/usart3_debug.c **** }
+ 117              		.loc 1 27 1 view .LVU22
+ 118 000c 08BD     		pop	{r3, pc}
+ 119              	.LVL6:
+ 120              	.L8:
+ 121              	.LCFI5:
+ 122              		.cfi_def_cfa_offset 0
+ 123              		.cfi_restore 3
+ 124              		.cfi_restore 14
+ 125              		.loc 1 27 1 view .LVU23
+ 126 000e 7047     		bx	lr
+ 127              	.L12:
+ 128              		.align	2
+ 129              	.L11:
+ 130 0010 00000000 		.word	.LC0
+ 131              		.cfi_endproc
+ 132              	.LFE148:
+ 134              		.text
+ 135              	.Letext0:
+ 136              		.file 2 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/ma
+ 137              		.file 3 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/sy
+ 138              		.file 4 "../../Drivers/BSP/STM32H7xx_Nucleo/stm32h7xx_nucleo.h"
+ 139              		.file 5 "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.3 rel1/arm-none-eabi/include/st
+ 140              		.file 6 "../../CM7/Core/Inc/main.h"
+ARM GAS  C:\Users\minis\AppData\Local\Temp\cchjEY8e.s 			page 4
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 usart3_debug.c
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:19     .text.Debug_USART3_Init:00000000 $t
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:25     .text.Debug_USART3_Init:00000000 Debug_USART3_Init
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:84     .rodata.Debug_USART3_Print.str1.4:00000000 $d
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:88     .text.Debug_USART3_Print:00000000 $t
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:94     .text.Debug_USART3_Print:00000000 Debug_USART3_Print
+C:\Users\minis\AppData\Local\Temp\cchjEY8e.s:130    .text.Debug_USART3_Print:00000010 $d
+
+UNDEFINED SYMBOLS
+BSP_COM_Init
+BSP_COM_SelectLogPort
+Error_Handler
+printf
